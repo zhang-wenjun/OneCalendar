@@ -1,0 +1,41 @@
+import {build} from 'esbuild';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url);const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
+await mkdir('artifacts/caldav-ui',{recursive:true});
+await build({entryPoints:['tests/caldav-ui-harness.ts'],outfile:'artifacts/caldav-ui/harness.js',bundle:true,platform:'browser',alias:{obsidian:'./tests/mobile-host.ts'}});
+await writeFile('artifacts/caldav-ui/index.html',`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--text-muted:#555;--background-primary:#fff;--background-secondary:#eee;--background-modifier-border:#ccc}*{box-sizing:border-box}body{margin:0;font:16px Arial;padding:16px}button,input,select{font:inherit;padding:10px;max-width:100%}main{max-width:780px;margin:auto}${await readFile('styles.css','utf8')}</style><main id="app"></main><script src="harness.js"></script>`);
+const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});const results=[];
+try{for(const width of [390,1000]){
+ const page=await browser.newPage({viewport:{width,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(pathToFileURL(process.cwd()+'/artifacts/caldav-ui/index.html').href);
+ const status=page.getByRole('status');await page.getByRole('button',{name:'Pull events now',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('Enter a CalDAV'));
+ await page.getByLabel('CalDAV server or calendar URL',{exact:true}).fill('calendar.example');await page.getByLabel('CalDAV username',{exact:true}).fill('test');await page.getByLabel('CalDAV app password',{exact:true}).fill('fixture-only');
+ await page.getByRole('button',{name:'Connect & discover calendars',exact:true}).click();console.log(await status.textContent());await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('Found 2'));
+ assert.equal(await page.getByLabel('CalDAV server or calendar URL',{exact:true}).inputValue(),'https://calendar.example/');assert.equal(await page.getByLabel('CalDAV app password',{exact:true}).inputValue(),'');
+ await page.getByLabel('Calendar',{exact:true}).selectOption('https://calendar.example/home/work/');await page.getByRole('button',{name:'Pull events now',exact:true}).click();console.log('pull:',await status.textContent());await page.waitForFunction(()=>document.querySelector('.tc-calendar-preview').textContent.includes('Calendar UI test'));
+ assert.equal(await page.evaluate(()=>window.caldavQA.plugin.settings.readEnabled),false);assert.match(await status.textContent(),/1 events/);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:`artifacts/caldav-ui/connected-${width}.png`,fullPage:true});
+ await page.evaluate(()=>window.caldavQA.state.fail=true);await page.getByRole('button',{name:'Pull events now',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('HTTP 401'));assert.equal(await page.evaluate(()=>window.caldavQA.plugin.externalEvents.length),1);
+ await page.evaluate(()=>{window.caldavQA.state.fail=false;window.caldavQA.state.empty=true;});await page.getByRole('button',{name:'Pull events now',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('No events'));
+ await page.getByLabel('Calendar',{exact:true}).selectOption('https://calendar.example/home/readonly/');await page.getByRole('button',{name:'Sync task reminders now',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('read only'));
+ await page.evaluate(()=>window.caldavQA.state.empty=false);
+ await page.getByRole('button',{name:'Add / update calendar',exact:true}).click();
+ await page.getByLabel('Calendar',{exact:true}).selectOption('https://calendar.example/home/work/');
+ await page.getByRole('button',{name:'Add / update calendar',exact:true}).click();
+ assert.equal(await page.locator('.tc-calendar-source').count(),2);
+ await page.getByLabel('Color for Work',{exact:true}).evaluate(e=>{e.value='#dc2626';e.dispatchEvent(new Event('change'));});
+ await page.getByRole('button',{name:'Pull events now',exact:true}).click();await page.waitForFunction(()=>window.caldavQA.plugin.externalEvents.length===2);
+ assert.match(await status.textContent(),/2\/2 calendars/);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.screenshot({path:`artifacts/caldav-ui/multiple-${width}.png`,fullPage:true});
+ await page.evaluate(()=>window.caldavQA.openCalendar());
+ const events=page.locator('.tc-week-event');assert.equal(await events.count(),2);
+ assert.ok((await events.evaluateAll(items=>items.map(e=>getComputedStyle(e).borderLeftColor))).includes('rgb(220, 38, 38)'));
+ await events.first().click();const modal=page.locator('.tc-event-modal');await modal.waitFor();assert.match(await modal.textContent(),/Full event description/);assert.match(await modal.textContent(),/Room 4/);assert.equal(await modal.locator('input,textarea,select').count(),0);
+ assert.equal(await modal.getByRole('button',{name:'Save',exact:true}).count(),0);assert.equal(await modal.getByRole('button',{name:'Close',exact:true}).evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(37, 99, 235)');
+ await page.screenshot({path:`artifacts/caldav-ui/details-${width}.png`,fullPage:true});await modal.getByRole('button',{name:'Close',exact:true}).click();assert.equal(await page.locator('.tc-event-modal').count(),0);
+ assert.deepEqual(errors,[]);results.push({width,status:'passed',checks:['visible validation','bare hostname normalization','principal/home discovery','calendar selection','manual pull without auto-sync','count and preview','401 displayed and cache retained','empty result feedback','read-only write guard']});await page.close();
+}}finally{await browser.close();}
+await writeFile('artifacts/caldav-ui/results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));
+

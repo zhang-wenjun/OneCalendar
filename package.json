@@ -1,0 +1,25 @@
+{
+  "name": "obsidian-task-calendar",
+  "version": "0.8.5",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit && node scripts/build.mjs",
+    "test": "node scripts/test.mjs",
+    "install:test": "node scripts/install.mjs",
+    "test:mobile": "node scripts/test-mobile.mjs",
+    "test:caldav": "node scripts/test-caldav-server.mjs",
+    "test:caldav-ui": "node scripts/test-caldav-ui.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.8.7",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.11.1",
+    "ical.js": "^2.2.1",
+    "yaml": "^2.7.0"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+artifacts/
+.npm-cache/
+AITestBed/.obsidian/plugins/task-calendar/
+AITestBed/TaskCalendar/
+AITestBed
