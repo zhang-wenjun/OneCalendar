@@ -27,7 +27,7 @@ export class Feishu implements CalendarProvider {
   }
   async put(calendar:string,key:string,title:string,time:string,externalId?:string){
     const start=Math.floor(Date.parse(time)/1000);
-    const body={summary:`[Task reminder] ${title}`,description:'Task reminder created and maintained by TaskCalendar.',start_time:{timestamp:String(start)},end_time:{timestamp:String(start+300)},reminders:[{minutes:0}],free_busy_status:'free',visibility:'private'};
+    const body={summary:`[Task reminder] ${title}`,description:'Task reminder created and maintained by OneCalendar.',start_time:{timestamp:String(start)},end_time:{timestamp:String(start+300)},reminders:[{minutes:0}],free_busy_status:'free',visibility:'private'};
     const path=`/calendar/v4/calendars/${enc(calendar)}/events`;
     const data=await this.request(externalId?'PATCH':'POST',externalId?`${path}/${enc(externalId)}`:`${path}?idempotency_key=${enc(key)}`,body);
     const id=data.event?.event_id ?? externalId;if(!id)throw new Error('Feishu returned no event ID. The reminder remains pending for retry.');return id;

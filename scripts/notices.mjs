@@ -1,6 +1,6 @@
 import {readFile,readdir,writeFile} from 'node:fs/promises';
 const root=JSON.parse(await readFile('package.json','utf8')),seen=new Set();
-let text='Third-party components bundled with TaskCalendar\n\n';
+let text='Third-party components bundled with OneCalendar\n\n';
 async function visit(name){
  if(seen.has(name))return;seen.add(name);const dir=`node_modules/${name}`,p=JSON.parse(await readFile(`${dir}/package.json`,'utf8'));
  text+=`\n${'='.repeat(72)}\n${p.name} ${p.version}\nLicense: ${p.license}\nSource: https://registry.npmjs.org/${p.name}/-/${p.name.split('/').pop()}-${p.version}.tgz\n`;

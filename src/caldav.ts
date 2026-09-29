@@ -64,15 +64,15 @@ export function readCalendar(text:string,calendar:string,href:string,start:Date,
 function owned(text:string,key?:string){
   const root=new ICAL.Component(ICAL.parse(text)),events=root.getAllSubcomponents('vevent');
   const c=events[0],marker=c?.getFirstPropertyValue('x-taskcalendar-id');
-  if(root.name!=='vcalendar'||events.length!==1||typeof marker!=='string'||!marker.startsWith('taskcalendar-')||c.getFirstPropertyValue('uid')!==`${marker}@taskcalendar`||(key&&marker!==key))throw Error('This calendar resource is not a TaskCalendar reminder. Nothing was changed.');
+  if(root.name!=='vcalendar'||events.length!==1||typeof marker!=='string'||!marker.startsWith('taskcalendar-')||c.getFirstPropertyValue('uid')!==`${marker}@taskcalendar`||(key&&marker!==key))throw Error('This calendar resource is not a OneCalendar reminder. Nothing was changed.');
   return {root,c,marker};
 }
 export function reminderCalendar(key:string,title:string,time:string,existing?:string){
   const {root,c}=existing?owned(existing,key):{root:new ICAL.Component('vcalendar'),c:new ICAL.Component('vevent')};
-  if(!existing){root.updatePropertyWithValue('version','2.0');root.updatePropertyWithValue('prodid','-//TaskCalendar//CalDAV reminders//EN');root.addSubcomponent(c);c.updatePropertyWithValue('uid',`${key}@taskcalendar`);c.updatePropertyWithValue('x-taskcalendar-id',key);}
+  if(!existing){root.updatePropertyWithValue('version','2.0');root.updatePropertyWithValue('prodid','-//OneCalendar//CalDAV reminders//EN');root.addSubcomponent(c);c.updatePropertyWithValue('uid',`${key}@taskcalendar`);c.updatePropertyWithValue('x-taskcalendar-id',key);}
   const d=new Date(time);if(!Number.isFinite(+d))throw Error('Invalid reminder time.');
   c.updatePropertyWithValue('summary',`[Task reminder] ${title}`);
-  c.updatePropertyWithValue('description','Task reminder created and maintained by TaskCalendar.');
+  c.updatePropertyWithValue('description','Task reminder created and maintained by OneCalendar.');
   c.updatePropertyWithValue('dtstamp',ICAL.Time.fromJSDate(new Date(),true));
   c.updatePropertyWithValue('dtstart',ICAL.Time.fromJSDate(d,true));
   c.removeAllProperties('duration');c.updatePropertyWithValue('dtend',ICAL.Time.fromJSDate(new Date(+d+300000),true));

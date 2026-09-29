@@ -1,5 +1,5 @@
 import { setIcon, ItemView, WorkspaceLeaf, Platform, MarkdownRenderer, Notice, Component } from 'obsidian';
-import type TaskCalendar from './main';
+import type OneCalendar from './main';
 import { RecordFile, active, addDays, dateKey, labels, matchesTask, parseDate } from './model';
 import { Editor, MemoEditor, button } from './forms';
 import { weekStart, atMinute, timeRange, layoutEvents } from './week';
@@ -14,8 +14,8 @@ export class CalendarView extends ItemView {
   calendarMode:'three'|'week'|'month'=Platform.isMobile?'three':'week'; private weekScroll?:number; private clockTimer?:number;
   private renderer?:Component; private frame?:number;
   private update=()=>{if(this.frame===undefined)this.frame=window.requestAnimationFrame(()=>{this.frame=undefined;this.render();});};
-  constructor(leaf:WorkspaceLeaf,public plugin:TaskCalendar){super(leaf);}
-  getViewType(){return VIEW;}getDisplayText(){return 'TaskCalendar';}getIcon(){return 'calendar-check';}
+  constructor(leaf:WorkspaceLeaf,public plugin:OneCalendar){super(leaf);}
+  getViewType(){return VIEW;}getDisplayText(){return 'OneCalendar';}getIcon(){return 'calendar-check';}
   async onOpen(){this.plugin.store.listeners.add(this.update);this.clockTimer=window.setInterval(()=>this.updateClock(),30000);this.render();}
   async onClose(){this.plugin.store.listeners.delete(this.update);if(this.frame!==undefined)window.cancelAnimationFrame(this.frame);if(this.clockTimer)window.clearInterval(this.clockTimer);}
   go(page:string){this.page=page==='tasks'?'board':page;this.project='';this.search='';this.limit=80;if(page==='board')this.filter='all';this.render();}

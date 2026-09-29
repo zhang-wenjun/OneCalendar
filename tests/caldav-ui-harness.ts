@@ -1,8 +1,8 @@
-import TaskCalendar from '../src/main';
+import OneCalendar from '../src/main';
 import {CalDav} from '../src/caldav';
 import {renderCalDavSettings} from '../src/caldav-settings';
 import {CalendarView} from '../src/view';
-const plugin=new TaskCalendar({} as any,{} as any);
+const plugin=new OneCalendar({} as any,{} as any);
 const state={fail:false,empty:false,calls:0};
 Object.assign(plugin,{app:{},store:{changed(){},all(){return [];}},saveData:async()=>{}});
 plugin.settings={...plugin.settings,calendarProvider:'caldav',readEnabled:false};

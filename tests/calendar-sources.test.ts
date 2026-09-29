@@ -1,9 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import TaskCalendar from '../src/main';
+import OneCalendar from '../src/main';
 import {CalendarSource,refreshMinutes} from '../src/calendar-sources';
 const sources:CalendarSource[]=[{id:'one',name:'Work',url:'https://one.example/cal/',server:'https://one.example/',username:'user1',secretName:'secret1',color:'#2563eb',enabled:true},{id:'two',name:'Study',url:'https://two.example/cal/',server:'https://two.example/',username:'user2',secretName:'secret2',color:'#16a34a',enabled:true}];
-function plugin(){const p=new TaskCalendar({} as any,{} as any);Object.assign(p,{app:{secretStorage:{getSecret:(name:string)=>name+'-password'}},store:{all:()=>[],changed(){}},saveData:async()=>{}});p.settings={...p.settings,calendarProvider:'caldav',caldavSources:sources.map(s=>({...s})),readEnabled:true};return p;}
+function plugin(){const p=new OneCalendar({} as any,{} as any);Object.assign(p,{app:{secretStorage:{getSecret:(name:string)=>name+'-password'}},store:{all:()=>[],changed(){}},saveData:async()=>{}});p.settings={...p.settings,calendarProvider:'caldav',caldavSources:sources.map(s=>({...s})),readEnabled:true};return p;}
 const event=(url:string)=>({id:url+'item',title:'Meeting',start:'2026-09-24T09:00Z',end:'2026-09-24T10:00Z',allDay:false,calendarId:url,provider:'caldav'});
 test('Multiple calendars route credentials separately and retain failed source cache',async()=>{
  const p=plugin(),calls:string[][]=[];let fail=false;p.calDav=((url:string,user:string,password:string)=>({list:async()=>{calls.push([url,user,password]);if(fail&&url===sources[1].url)throw Error('Offline');return [event(url)];}})) as any;

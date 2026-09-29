@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import {readFile,writeFile,readdir} from 'node:fs/promises';
 const pairs=`
-任务与闪念写入日记；项目备忘位于 Projects/项目名/项目名-Memo.md。请同步日记、Projects 和 TaskCalendar（日程与重复规则）。飞书与安卓外部联动尚未实测。|Tasks and ideas live in daily notes. Project memos live in Projects/<name>/<name>-Memo.md. Sync diary, Projects and TaskCalendar together. Feishu and Android integrations have not been device-tested.
+任务与闪念写入日记；项目备忘位于 Projects/项目名/项目名-Memo.md。请同步日记、Projects 和 OneCalendar（日程与重复规则）。飞书与安卓外部联动尚未实测。|Tasks and ideas live in daily notes. Project memos live in Projects/<name>/<name>-Memo.md. Sync diary, Projects and OneCalendar together. Feishu and Android integrations have not been device-tested.
 默认沿用每日笔记的目录、日期格式及模板；未配置时使用 diary/YYYY-MM-DD.md。日记中的复选框加入任务，带 #闪念 的列表项加入收集箱；快速记录也直接追加到日记。|Uses the Daily notes folder, date format and template, or diary/YYYY-MM-DD.md by default. Only checkboxes under Tasks and bullets under Ideas are indexed. Journal stays private to your writing.
 任务正文保存在日记中；这里保存编号、项目关联和重复规则。请与日记和 Projects 一起同步。插件在文件变化时建立内存索引，查看任务不读取本文件。|Task text lives in daily notes. This file stores IDs, project links and recurrence metadata. Sync it with diary and Projects. The plugin refreshes its memory index when files change; queries do not read this file.
 新备忘将成为当前展示；旧备忘保留在历史中。|The new memo becomes the current update. Previous memos remain in history.
@@ -48,7 +48,7 @@ const pairs=`
 飞书未返回日程标识，保留待办以便重试|Feishu returned no event ID. The reminder remains pending for retry.
 源任务缺失。请恢复文件或在设置中确认取消其提醒。|Source task missing. Restore its file or cancel its reminder in settings.
 提醒时间已过去，请调整后重试|Reminder time has passed. Adjust it and retry.
-由 TaskCalendar 创建并维护的任务提醒。|Task reminder created and maintained by TaskCalendar.
+由 OneCalendar 创建并维护的任务提醒。|Task reminder created and maintained by OneCalendar.
 修改规则的生效日期不能早于今天；过去的记录保留不变|The effective date cannot precede today. Past records are preserved.
 同名项目文件已存在，请使用已有项目|A project with this name already exists. Use the existing project.
 项目尚未迁移到 Projects 文件夹，请先迁移|Migrate the project into Projects first.
@@ -104,7 +104,7 @@ const pairs=`
 快速记录任务|Capture a task
 打开今天的日记|Open today journal
 打开工作台|Open dashboard
-打开 TaskCalendar|Open TaskCalendar
+打开 OneCalendar|Open OneCalendar
 新建日程|New event
 同步日历及提醒|Sync calendars and reminders
 飞书日程只读展示|Read-only Feishu events

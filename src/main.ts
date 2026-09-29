@@ -1,3 +1,4 @@
+import {renamedPluginData} from './legacy-settings';
 import {DiaryCalendar,DIARY_VIEW} from './diary-calendar';
 import { Platform, Plugin, TFile, TFolder, Notice, PluginSettingTab, Setting, App, requestUrl, normalizePath } from 'obsidian';
 import { Store, Files } from './store';
@@ -15,14 +16,16 @@ import {CalendarSource,calendarColors,safeColor,refreshMinutes} from './calendar
 
 interface Settings {caldavSources?:CalendarSource[];refreshMinutes?:number;calendarProvider?:'feishu'|'caldav';caldavUrl?:string;caldavUsername?:string;caldavSecretName?:string;caldavCalendarUrl?:string;caldavCalendars?:DavCalendar[];diarySectionsVersion?:number;root:string; calendarIds:string; reminderCalendar:string; readEnabled:boolean; writeEnabled:boolean; secretName:string;diaryFolder?:string;diaryFormat?:string}
 const defaults:Settings={calendarProvider:'feishu',root:'TaskCalendar',calendarIds:'',reminderCalendar:'',readEnabled:false,writeEnabled:false,secretName:'task-calendar-feishu-user-token'};
-export default class TaskCalendar extends Plugin {
+export default class OneCalendar extends Plugin {
   store!:Store; reminders!:Reminders; settings=defaults; externalEvents:ExternalEvent[]=[];
   diary!:DailyNotes;
   sourcePasswords=new Map<string,string>();private lastRefreshAttempt=0;
   refreshDue(now=Date.now()){return now-this.lastRefreshAttempt>=refreshMinutes(this.settings.refreshMinutes)*60000;}
   calendarStatus='No calendar connected. Local features work offline.'; sessionToken=''; sessionCalDavPassword=''; caldavStatus='Enter your server, username and app password, then connect.'; private savedAt=''; private syncing=false; private timer?:number; private disposed=false; private ready=false;
   async onload(){
-    const data=await this.loadData() ?? {};this.settings={...defaults,...data.settings};this.externalEvents=data.externalEvents ?? [];this.savedAt=data.savedAt ?? '';
+    const current=await this.loadData();const imported=await renamedPluginData(current,this.app.vault.adapter,this.app.vault.configDir);
+    if(current==null&&imported)await this.saveData(imported);
+    const data=imported??{};this.settings={...defaults,...data.settings};this.externalEvents=data.externalEvents ?? [];this.savedAt=data.savedAt ?? '';
     if(this.settings.caldavSources===undefined&&this.settings.caldavCalendarUrl){const s=this.currentSource();this.settings.caldavSources=[s];this.externalEvents=this.externalEvents.map(e=>e.provider==='caldav'&&e.calendarId===s.url?{...e,sourceId:s.id,calendarName:s.name,color:s.color}:e);}
     if(this.savedAt)this.calendarStatus=`Cache updated: ${new Date(this.savedAt).toLocaleString('en-US')}`;
     const vault=this.app.vault;
@@ -36,7 +39,7 @@ export default class TaskCalendar extends Plugin {
     this.registerView(DIARY_VIEW,leaf=>new DiaryCalendar(leaf,this));
     this.addCommand({id:'open-diary-calendar',name:'Open diary calendar',callback:()=>void this.openDiaryCalendar()});
     if(!Platform.isMobile)this.app.workspace.onLayoutReady(()=>void this.openDiaryCalendar(false));
-    this.registerView(VIEW,leaf=>new CalendarView(leaf,this));this.addRibbonIcon('calendar-check','Open TaskCalendar',()=>void this.open());
+    this.registerView(VIEW,leaf=>new CalendarView(leaf,this));this.addRibbonIcon('calendar-check','Open OneCalendar',()=>void this.open());
     this.addRibbonIcon('lightbulb','New idea',()=>this.requestIdeaCapture());
     this.addCommand({id:'open',name:'Open dashboard',callback:()=>void this.open()});
     this.addCommand({id:'open-diary',name:'Open today journal',callback:()=>void this.run(()=>this.openDiary(dateKey()))});
@@ -46,6 +49,7 @@ export default class TaskCalendar extends Plugin {
         const current=action.record?this.store.find(action.record.data.id):undefined;if(action.record&&!current)throw Error('Record changed; try again.');new Editor(this.app,this.store,kind,current,kind==='task'?{plan:day}:{},day).open();
       });
     }});
+    this.registerObsidianProtocolHandler('one-calendar-idea',()=>this.requestIdeaCapture());
     this.registerObsidianProtocolHandler('task-calendar-idea',()=>this.requestIdeaCapture());
     this.addCommand({id:'copy-idea-link',name:'Copy Ideas shortcut link',callback:()=>void this.run(async()=>{await navigator.clipboard.writeText(this.ideaCaptureLink());new Notice('Ideas shortcut link copied.');})});
     this.addCommand({id:'capture-idea',name:'Capture an idea',icon:'lightbulb',callback:()=>this.capture('idea')});
@@ -66,7 +70,7 @@ export default class TaskCalendar extends Plugin {
     if(typeof document!=='undefined')this.registerDomEvent(document,'visibilitychange',()=>{if(document.visibilityState==='visible')void this.run(()=>this.resume());});
   }
   private pendingIdea=false;
-  ideaCaptureLink(){return `obsidian://task-calendar-idea?vault=${encodeURIComponent(this.app.vault.getName())}`;}
+  ideaCaptureLink(){return `obsidian://one-calendar-idea?vault=${encodeURIComponent(this.app.vault.getName())}`;}
   requestIdeaCapture(){if(this.disposed)return;this.pendingIdea=true;this.flushIdeaCapture();}
   flushIdeaCapture(){if(!this.ready||this.disposed||!this.pendingIdea)return;this.pendingIdea=false;this.capture('idea');}
   capture(kind:'task'|'idea'){
@@ -93,7 +97,7 @@ export default class TaskCalendar extends Plugin {
   }
   async openDiary(day:string){await this.diary.configure(this.settings.diaryFolder,this.settings.diaryFormat);await this.store.init();return this.diary.open(day);}
   schedule(){if(this.timer)window.clearTimeout(this.timer);if(this.ready&&!this.disposed&&!this.store.migrating)this.timer=window.setTimeout(()=>void this.run(()=>this.syncReminders()),1500);}
-  async run(fn:()=>Promise<unknown>){try{await fn();}catch(e){if((e as Error).message==='Diary creation cancelled.')return;new Notice(`TaskCalendar: ${(e as Error).message}`,8000);}}
+  async run(fn:()=>Promise<unknown>){try{await fn();}catch(e){if((e as Error).message==='Diary creation cancelled.')return;new Notice(`OneCalendar: ${(e as Error).message}`,8000);}}
   async open(){let leaf=this.app.workspace.getLeavesOfType(VIEW)[0];if(!leaf){leaf=this.app.workspace.getLeaf('tab');await leaf.setViewState({type:VIEW,active:true});}await this.app.workspace.revealLeaf(leaf);}
   token(){return this.sessionToken||this.app.secretStorage?.getSecret(this.settings.secretName)||'';}
   hasCredentials(){return this.settings.calendarProvider==='caldav'?(this.settings.caldavSources?.length?this.settings.caldavSources.some(s=>s.enabled&&!!this.sourcePassword(s)):!!this.calDavPassword()&&!!this.settings.caldavCalendarUrl):!!this.token();}
@@ -195,9 +199,9 @@ export default class TaskCalendar extends Plugin {
   onunload(){this.disposed=true;if(this.timer)window.clearTimeout(this.timer);this.sessionToken='';this.sessionCalDavPassword='';this.sourcePasswords.clear();}
 }
 class CalendarSettings extends PluginSettingTab {
-  constructor(app:App,public plugin:TaskCalendar){super(app,plugin);}
+  constructor(app:App,public plugin:OneCalendar){super(app,plugin);}
   display(){
-    const el=this.containerEl;el.empty();el.addClass('tc-settings');el.createEl('h2',{text:`TaskCalendar ${this.plugin.manifest.version}`});
+    const el=this.containerEl;el.empty();el.addClass('tc-settings');el.createEl('h2',{text:`OneCalendar ${this.plugin.manifest.version}`});
     el.createEl('p',{text:'Tasks and ideas live in daily notes. Project memos live in Projects/<name>/<name>-Memo.md. Sync diary, Projects and TaskCalendar together. Calendar write access depends on the service. Android notification delivery has not been device-tested.'});
     el.createEl('h3',{text:'Diary'});
     el.createEl('p',{text:'Uses the Daily notes folder, date format and template, or diary/YYYY-MM-DD.md by default. Only checkboxes under Tasks and bullets under Ideas are indexed. Journal stays private to your writing.'});

@@ -1,8 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import TaskCalendar from '../src/main';
+import OneCalendar from '../src/main';
 test('Resume waits for readiness, coalesces concurrent resumes, and releases after failure',async()=>{
- const p=new TaskCalendar({} as any,{} as any);let ticks=0,reminders=0,changes=0;let release!:()=>void;
+ const p=new OneCalendar({} as any,{} as any);let ticks=0,reminders=0,changes=0;let release!:()=>void;
  p.store={tick:async()=>{ticks++;await new Promise<void>(r=>release=r);},changed:()=>changes++} as any;
  p.syncReminders=async()=>{reminders++;};p.settings={...p.settings,readEnabled:false};
  await p.resume();assert.equal(ticks,0);(p as any).ready=true;

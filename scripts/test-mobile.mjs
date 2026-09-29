@@ -29,6 +29,7 @@ try{
   await page.screenshot({path:`artifacts/mobile/sticky-${width}.png`});
   await page.locator('.tc-calendar-viewport').evaluate(e=>e.scrollTop=0);
   await page.getByRole('button',{name:'＋ Event',exact:true}).tap();await page.getByRole('button',{name:'Save',exact:true}).tap();assert.ok(await page.locator('.tc-error').textContent());
+  await page.getByLabel('End time',{exact:true}).fill('2026-09-25T10:00');
   await page.getByLabel('Start time',{exact:true}).fill('2026-09-25T23:50');await page.getByLabel('Title',{exact:true}).tap();
   assert.equal(await page.getByLabel('End time',{exact:true}).inputValue(),'2026-09-26T00:20');
   assert.equal(await page.getByLabel('Linked task (optional)').locator('option').count(),1);

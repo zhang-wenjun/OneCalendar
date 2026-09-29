@@ -1,5 +1,5 @@
 import {Notice} from 'obsidian';
-import type TaskCalendar from './main';
+import type OneCalendar from './main';
 import {Editor} from './forms';
 import {dateKey,make} from './model';
 import {VIEW,CalendarView} from './view';
@@ -9,7 +9,7 @@ import {diarySections,appendDiaryEntry} from './diary-sections';
 import {diaryRecordAtLine} from './diary';
 
 /** Explicit, local-only acceptance commands; no external calendar calls. */
-export async function runJournalQA(plugin:TaskCalendar){
+export async function runJournalQA(plugin:OneCalendar){
  if(plugin.app.vault.getName()!=='AITestBed')throw Error('AITestBed only');
  const s=plugin.store,vault=plugin.app.vault,run=Date.now().toString(36),results:string[]=[];let failure:unknown;
  const check=(name:string,value:unknown)=>{if(!value)throw Error(name);results.push(`- [x] ${name}`);};
@@ -32,7 +32,7 @@ export async function runJournalQA(plugin:TaskCalendar){
  }catch(e){failure=e;results.push(`- [ ] FAILED: ${(e as Error).message}`);}
  await vault.create(`QA-storage-${run}.md`, `# Storage acceptance\n\n${results.join('\n')}\n\nLocal Obsidian only; external calendars, Android and two-device sync were not tested.\n`);new Notice(failure?'Storage test failed; see report':`Storage tests passed: ${results.length}`,8000);if(failure)throw failure;
 }
-export async function runRevisionQA(plugin:TaskCalendar){
+export async function runRevisionQA(plugin:OneCalendar){
  if(plugin.app.vault.getName()!=='AITestBed')throw Error('AITestBed only');
  await plugin.open();const view=plugin.app.workspace.getLeavesOfType(VIEW)[0].view as CalendarView;view.day=dateKey();view.calendarMode='week';view.go('calendar');
  if(view.contentEl.querySelectorAll('.tc-week-column').length!==7||view.contentEl.querySelectorAll('.tc-time-slot').length!==336)throw Error('Invalid week grid');

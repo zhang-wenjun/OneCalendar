@@ -5,3 +5,5 @@ artifacts/
 AITestBed/.obsidian/plugins/task-calendar/
 AITestBed/TaskCalendar/
 AITestBed
+AITestBed/.obsidian/plugins/one-calendar/
+release/OneCalendar-*/

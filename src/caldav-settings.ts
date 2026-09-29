@@ -1,12 +1,12 @@
-import type TaskCalendar from './main';
+import type OneCalendar from './main';
 import {calendarUrl} from './caldav';
 import {button} from './forms';
 import {safeColor} from './calendar-sources';
 
-export function renderCalDavSettings(root:HTMLElement,plugin:TaskCalendar){
+export function renderCalDavSettings(root:HTMLElement,plugin:OneCalendar){
   const section=root.createDiv();const redraw=()=>{section.empty();renderContents(section,plugin,redraw);};redraw();
 }
-function renderContents(root:HTMLElement,plugin:TaskCalendar,redraw:()=>void){
+function renderContents(root:HTMLElement,plugin:OneCalendar,redraw:()=>void){
   root.createEl('h3',{text:'My calendars'});
   root.createEl('p',{cls:'tc-muted',text:'Add calendars from the same account or different servers. Colors identify their events. Passwords must be configured on each device. The connection form below is also the task reminder target.'});
   for(const s of plugin.settings.caldavSources??[]){

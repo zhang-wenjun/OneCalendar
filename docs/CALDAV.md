@@ -1,10 +1,10 @@
 # CalDAV setup and testing
 
-TaskCalendar 0.7.0 supports multiple saved CalDAV calendars across accounts and servers when CalDAV is selected. CalDAV reads external events and, on a writable current connection, creates, updates and cancels task reminder events. External events open in a read-only detail window. Ordinary local events are not uploaded, and remote edits are not imported into task fields. This is not full two-way synchronization.
+OneCalendar 0.7.0 supports multiple saved CalDAV calendars across accounts and servers when CalDAV is selected. CalDAV reads external events and, on a writable current connection, creates, updates and cancels task reminder events. External events open in a read-only detail window. Ordinary local events are not uploaded, and remote edits are not imported into task fields. This is not full two-way synchronization.
 
 ## Connection
 
-1. In Obsidian Settings > TaskCalendar > Third-party calendars, choose **CalDAV**.
+1. In Obsidian Settings > OneCalendar > Third-party calendars, choose **CalDAV**.
 2. Fill **CalDAV server or calendar URL** and **CalDAV username**. A hostname such as caldav.feishu.cn is normalized to HTTPS. A specific collection URL also works.
 3. Enter the service-generated CalDAV app password, then click **Connect & discover calendars**. This uses the entered password directly for the current session. Leave the password blank to retain existing credentials for the same connection.
 4. Choose a discovered **Calendar**. A single result is selected automatically; multiple results require a choice. Read-only calendars are labeled.
@@ -19,14 +19,14 @@ Authentication uses Basic over HTTPS. OAuth, Digest and multiple simultaneous co
 
 | Test | Steps | Expected result |
 | --- | --- | --- |
-| Read | Create an event in the remote calendar, then Pull events now | It appears as CalDAV / Read only in TaskCalendar. |
+| Read | Create an event in the remote calendar, then Pull events now | It appears as CalDAV / Read only in OneCalendar. |
 | Create | Create a task with Reminder time at least 15 minutes in the future; Sync task reminders now | The task reminder becomes Synced; the server calendar contains one `[Task reminder]` event with an alarm at its start. |
 | Retry | Sync again | No duplicate reminder is created. |
-| Update | Change the task title or reminder time in TaskCalendar; sync | The same reminder event is updated. |
+| Update | Change the task title or reminder time in OneCalendar; sync | The same reminder event is updated. |
 | Cancel | Complete or cancel the task, or clear Reminder time; sync | Its remote reminder is deleted. |
 | Offline | Disconnect the network and refresh | Previous cached events remain; failed reminder writes can retry. |
 
-TaskCalendar filters its own remote reminder events out of its external event display to avoid duplicates. Check the remote calendar or phone calendar to verify the writes. A Synced status confirms the server accepted the reminder, not that a phone notification was delivered.
+OneCalendar filters its own remote reminder events out of its external event display to avoid duplicates. Check the remote calendar or phone calendar to verify the writes. A Synced status confirms the server accepted the reminder, not that a phone notification was delivered.
 
 The task is authoritative for plugin-created reminders. A later local edit can overwrite changes made to that reminder in another calendar client. Remote-only edits and deletions are not polled back into tasks. Do not use this as two-way task editing.
 
@@ -34,7 +34,7 @@ The task is authoritative for plugin-created reminders. A later local edit can o
 
 The full path is:
 
-TaskCalendar -> CalDAV server -> Android CalDAV sync adapter -> phone calendar -> notification.
+OneCalendar -> CalDAV server -> Android CalDAV sync adapter -> phone calendar -> notification.
 
 Use an Android CalDAV sync adapter such as DAVx5 and select the same calendar, then enable that calendar and its notifications in your calendar app. DAVx5 integrates calendars into Android's calendar storage; it is not the reminder UI itself. See [DAVx5 introduction](https://manual.davx5.com/introduction.html) and [synchronization settings](https://manual.davx5.com/settings.html).
 

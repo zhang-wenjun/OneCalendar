@@ -15,7 +15,7 @@ export class EventDetails extends Modal {
     field(e.allDay?'Start · All day':'Start',time(e.start));field(e.allDay?'End · Exclusive':'End',time(e.end));
     if(!e.allDay)field('Display timezone',Intl.DateTimeFormat().resolvedOptions().timeZone);
     field('Location',e.location??'');field('Description',e.description??'');
-    this.contentEl.createEl('p',{text:'To change this event, edit it in its original calendar, then refresh TaskCalendar.',cls:'tc-muted'});
+    this.contentEl.createEl('p',{text:'To change this event, edit it in its original calendar, then refresh OneCalendar.',cls:'tc-muted'});
     button(this.contentEl.createDiv({cls:'tc-form-actions'}),'Close',()=>this.close(),'mod-cta');
   }
   onClose(){this.contentEl.empty();}

@@ -16,7 +16,7 @@ export class Details {
   accept(raw:string){const rows=this.parse(raw);this.raw=raw;this.rows=new Map(Object.entries(rows));this.tokens=new Map(Object.entries(rows).map(([t,d])=>[d.id!,t]));}
   async reload(){if(!this.files.exists(this.path)){this.rows.clear();this.tokens.clear();this.raw='';return;}const raw=await this.files.read(this.path);if(raw!==this.raw)this.accept(raw);}
   token(id:string){let t=this.tokens.get(id);if(t)return t;do{t=crypto.randomUUID().replace(/-/g,'').slice(0,8);}while(this.rows.has(t));return t;}
-  format(rows:Record<string,Partial<Entity>>){return '# TaskCalendar Details\n\nTask text lives in daily notes. This file stores IDs, project links and recurrence metadata. Sync it with diary and Projects. The plugin refreshes its memory index when files change; queries do not read this file.\n\n```json\n'+JSON.stringify({version:1,records:rows},null,2)+'\n```\n';}
+  format(rows:Record<string,Partial<Entity>>){return '# OneCalendar Details\n\nTask text lives in daily notes. This file stores IDs, project links and recurrence metadata. Sync it with diary and Projects. The plugin refreshes its memory index when files change; queries do not read this file.\n\n```json\n'+JSON.stringify({version:1,records:rows},null,2)+'\n```\n';}
   async save(data:Partial<Entity>&{id:string}){
     const token=this.token(data.id),expected=this.rows.get(token);const value={...data};delete value.title;delete value.body;
     // A missing plan means explicitly unplanned, rather than the diary's default date.

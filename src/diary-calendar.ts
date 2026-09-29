@@ -1,11 +1,11 @@
 import {setIcon,ItemView,WorkspaceLeaf} from 'obsidian';
-import type TaskCalendar from './main';
+import type OneCalendar from './main';
 import {addDays,dateKey,parseDate} from './model';
 import {button} from './forms';
 export const DIARY_VIEW='task-calendar-diary';
 export class DiaryCalendar extends ItemView {
   month=dateKey().slice(0,7);
-  constructor(leaf:WorkspaceLeaf,private plugin:TaskCalendar){super(leaf);}
+  constructor(leaf:WorkspaceLeaf,private plugin:OneCalendar){super(leaf);}
   getViewType(){return DIARY_VIEW;}getDisplayText(){return 'Diary calendar';}getIcon(){return 'calendar-days';}
   async onOpen(){
     this.registerEvent(this.app.workspace.on('file-open',()=>this.render()));

@@ -5,7 +5,7 @@ const utc=(s:string)=>new Date(s).toISOString().replace(/[-:]/g,'').replace(/\.\
 export function eventCalendar(record:RecordFile){
   const d=record.data;
   if(!d.start||!d.end||!d.remind)throw Error('An event and reminder time are required.');
-  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//TaskCalendar//EN','BEGIN:VEVENT',`UID:${escape(d.id)}@taskcalendar`,`DTSTAMP:${utc(d.updated)}`,`DTSTART:${utc(d.start)}`,`DTEND:${utc(d.end)}`,`SUMMARY:${escape(d.title)}`,`DESCRIPTION:${escape(record.body)}`,'BEGIN:VALARM','ACTION:DISPLAY',`TRIGGER;VALUE=DATE-TIME:${utc(d.remind)}`,`DESCRIPTION:${escape(d.title)}`,'END:VALARM','END:VEVENT','END:VCALENDAR'];
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//OneCalendar//EN','BEGIN:VEVENT',`UID:${escape(d.id)}@taskcalendar`,`DTSTAMP:${utc(d.updated)}`,`DTSTART:${utc(d.start)}`,`DTEND:${utc(d.end)}`,`SUMMARY:${escape(d.title)}`,`DESCRIPTION:${escape(record.body)}`,'BEGIN:VALARM','ACTION:DISPLAY',`TRIGGER;VALUE=DATE-TIME:${utc(d.remind)}`,`DESCRIPTION:${escape(d.title)}`,'END:VALARM','END:VEVENT','END:VCALENDAR'];
   // RFC 5545 folds at 75 octets, without splitting a Unicode character.
   return lines.map(line=>{let out='',count=0;for(const c of line){const n=new TextEncoder().encode(c).length;if(count+n>75){out+='\r\n ';count=1;}out+=c;count+=n;}return out;}).join('\r\n')+'\r\n';
 }

@@ -5,7 +5,7 @@ import {CalDav,calendarUrl,basicAuth,readCalendar,reminderCalendar,DavTransport}
 import {Reminders} from '../src/calendar';
 import {Store,Files} from '../src/store';
 import {make} from '../src/model';
-import TaskCalendar from '../src/main';
+import OneCalendar from '../src/main';
 const url='https://calendar.example/users/me/test/';
 const start=new Date('2026-09-01T00:00:00Z'),end=new Date('2026-10-01T00:00:00Z');
 const wrap=(body:string)=>`BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${body}\r\nEND:VCALENDAR\r\n`;
@@ -99,7 +99,7 @@ test('CalDAV reminder writes are idempotent, alarm-bearing and use conditional u
 test('CalDAV protects foreign resources and rejects concurrent-write conflicts',async()=>{
  const foreign=wrap(event('DTSTART:20260924T090000Z'));let writes=0;
  const dav=new CalDav(url,async(method)=>{if(method!=='GET')writes++;return {status:200,text:foreign,headers:{etag:'"1"'}};});
- await assert.rejects(dav.put(url,'taskcalendar-x','x','2026-09-24',url+'foreign.ics'),/stable ID/);await assert.rejects(dav.remove(url,url+'foreign.ics'),/not a TaskCalendar/);assert.equal(writes,0);
+ await assert.rejects(dav.put(url,'taskcalendar-x','x','2026-09-24',url+'foreign.ics'),/stable ID/);await assert.rejects(dav.remove(url,url+'foreign.ics'),/not a OneCalendar/);assert.equal(writes,0);
  const conflict=new CalDav(url,async method=>method==='GET'?{status:200,text:reminderCalendar('taskcalendar-x','x','2026-09-24'),headers:{etag:'"1"'}}:{status:412,text:'',headers:{} as Record<string,string>});await assert.rejects(conflict.put(url,'taskcalendar-x','new','2026-09-25'),/changed elsewhere/);
 });
 test('Reminder queue pins providers and never routes legacy Feishu mappings to CalDAV',async()=>{
@@ -114,12 +114,12 @@ test('CalDAV reads a supplied timezone instead of interpreting it as local time'
  const list=readCalendar(text,url,url+'zone.ics',start,end);assert.equal(list[0].start,'2026-09-24T01:00:00.000Z');
 });
 test('CalDAV credentials are not persisted with settings and are detached on connection changes',async()=>{
- const p=new TaskCalendar({} as any,{} as any);let saved:any;const secrets=new Map([['task-calendar-caldav-password','old-secret']]);
+ const p=new OneCalendar({} as any,{} as any);let saved:any;const secrets=new Map([['task-calendar-caldav-password','old-secret']]);
  Object.assign(p,{app:{secretStorage:{getSecret:(key:string)=>secrets.get(key)}},saveData:async(data:any)=>{saved=data;},store:{changed:()=>{}}});p.settings={...p.settings,calendarProvider:'caldav',caldavUrl:url,caldavUsername:'user'};p.sessionCalDavPassword='session-secret';await p.saveSettings();assert.ok(!JSON.stringify(saved).includes('secret\"'));assert.ok(!JSON.stringify(saved).includes('session-secret'));
  await p.changeCalDavConnection('caldavUrl','https://other.example/cal/');assert.equal(p.calDavPassword(),'');assert.equal(p.sessionCalDavPassword,'');assert.deepEqual(p.externalEvents,[]);
 });
 test('Calendar refresh preserves cache on failure and discards results after switching connections',async()=>{
- const p=new TaskCalendar({} as any,{} as any);const cached={id:'cached',title:'Keep',start:'2026-09-24T09:00Z',end:'2026-09-24T10:00Z',allDay:false,calendarId:url};p.settings={...p.settings,calendarProvider:'caldav',caldavUrl:url,caldavCalendarUrl:url,readEnabled:true};p.externalEvents=[cached];p.store={all:()=>[],changed:()=>{}} as any;p.saveSettings=async()=>{};
+ const p=new OneCalendar({} as any,{} as any);const cached={id:'cached',title:'Keep',start:'2026-09-24T09:00Z',end:'2026-09-24T10:00Z',allDay:false,calendarId:url};p.settings={...p.settings,calendarProvider:'caldav',caldavUrl:url,caldavCalendarUrl:url,readEnabled:true};p.externalEvents=[cached];p.store={all:()=>[],changed:()=>{}} as any;p.saveSettings=async()=>{};
  p.provider=()=>({list:async()=>{throw Error('Offline');}} as any);await assert.rejects(p.syncCalendar(),/Offline/);assert.deepEqual(p.externalEvents,[cached]);
  p.provider=()=>({list:async()=>{p.settings={...p.settings,calendarProvider:'feishu'};return [];} } as any);await p.syncCalendar();assert.deepEqual(p.externalEvents,[cached]);
 });

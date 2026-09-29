@@ -1,8 +1,30 @@
-# TaskCalendar 0.8.5
+# OneCalendar 0.9.0
+
+A free, MIT-licensed Obsidian plugin for tasks, quick ideas, lightweight projects and calendars. Your notes remain Markdown files. The plugin supports desktop and Android, with an English interface.
+
+## Install
+
+Download `main.js`, `manifest.json` and `styles.css` from the [latest GitHub release](https://github.com/zhang-wenjun/OneCalendar/releases/latest). Place all three files in `<vault>/.obsidian/plugins/one-calendar/`, then enable **OneCalendar** in Obsidian's Community plugins settings. If upgrading from the development TaskCalendar plugin, follow the migration notes below before enabling it.
+
+## License and support
+
+OneCalendar's original code is licensed under the [MIT License](LICENSE), copyright 2026 zhang-wenjun. Bundled dependencies retain their own licenses; see [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+
+The plugin is free to use. Any future Buy Me a Coffee support will be voluntary and will not unlock paid-only features. No donation account is linked yet.
+
+For release preparation, see [RELEASING.md](docs/RELEASING.md).
+
+## Rename and upgrade in 0.9.0
+
+The public plugin is **OneCalendar**, ID **`one-calendar`**, repository **https://github.com/zhang-wenjun/OneCalendar**. The former `task-calendar` ID belongs to another community plugin and must not be used for this release.
+
+Disable the old development TaskCalendar plugin before enabling OneCalendar. Install the three release files into `.obsidian/plugins/one-calendar/`. Existing development settings can be imported from the old plugin on first launch. Keep the old plugin directory until you have verified your settings; never install both enabled. Command shortcuts and mobile toolbar entries using `task-calendar:` may need to be reassigned to OneCalendar.
+
+The data directory remains **TaskCalendar** for compatibility, hidden from the file explorer. Do not rename it manually. Existing metadata markers, secret names, saved view types and calendar event IDs remain stable. Both `obsidian://one-calendar-idea` and the original `obsidian://task-calendar-idea` work; newly copied links use the new name. Historical release folders retain their original identity and must not be uploaded as the new release.
 
 ## Hidden data folder in 0.8.5
 
-The default `TaskCalendar` data folder is hidden from the Obsidian file explorer while the plugin stylesheet is loaded. The physical folder and its path are unchanged, so indexing and vault synchronization continue normally. This is a display preference, not access protection. Existing migration backups in AITestBed were removed separately; installing this version does not automatically delete files in other vaults.
+The legacy `TaskCalendar` data folder is hidden from the Obsidian file explorer while the plugin stylesheet is loaded. The physical folder and its path are unchanged, so indexing and vault synchronization continue normally. This is a display preference, not access protection. Existing migration backups in AITestBed were removed separately; installing this version does not automatically delete files in other vaults.
 
 ## Diary navigation in 0.8.4
 
@@ -14,9 +36,9 @@ The Obsidian ribbon (the mobile quick-action menu) now includes **New idea** wit
 
 ## Ideas shortcut in 0.8.2
 
-Run **TaskCalendar: Copy Ideas shortcut link** in the target vault. A shortcut launcher can open this URI to launch the Ideas editor directly, including after the plugin finishes starting:
+Run **OneCalendar: Copy Ideas shortcut link** in the target vault. A shortcut launcher can open this URI to launch the Ideas editor directly, including after the plugin finishes starting:
 
-`obsidian://task-calendar-idea?vault=YOUR_URL_ENCODED_VAULT_NAME`
+`obsidian://one-calendar-idea?vault=YOUR_URL_ENCODED_VAULT_NAME`
 
 Saving uses the normal Ideas capture: today's daily note, under `## Ideas`. Merely opening the link does not create an idea. No Advanced URI plugin is needed.
 
@@ -26,7 +48,7 @@ Quick actions and calendar navigation use monochrome Obsidian SVG icons, with th
 
 ## Calendar and diary updates in 0.8.0
 
-Desktop adds a right-sidebar **Diary calendar**. Use **TaskCalendar: Open diary calendar** to reveal it. Date buttons open existing notes; creating a missing note for any date other than today asks for confirmation. This applies to TaskCalendar entry points, including recurring tasks. Cancelling defers that date for the current session; click it again to reconsider. Other plugins and Obsidian core commands control their own note creation.
+Desktop adds a right-sidebar **Diary calendar**. Use **OneCalendar: Open diary calendar** to reveal it. Date buttons open existing notes; creating a missing note for any date other than today asks for confirmation. This applies to OneCalendar entry points, including recurring tasks. Cancelling defers that date for the current session; click it again to reconsider. Other plugins and Obsidian core commands control their own note creation.
 
 Overview replaces Today. Calendar has **3 days**, **Week**, and **Month**; phones default to 3 days. Its compact controls and title stay above a single scrolling area, and the timetable date row stays visible during scrolling. Refresh and connection status remain at the bottom.
 
@@ -50,7 +72,7 @@ An Obsidian plugin for personal tasks, lightweight projects, quick ideas and cal
 
 Use **Alt+T** for tasks and **Alt+I** for ideas (Option+T / Option+I on macOS). On a matching entry or its description, the shortcut opens Edit. On a blank line or empty list placeholder, it opens New. New entries are saved to Tasks or Ideas in the currently open daily note, even for past or future dates. A new task defaults its planned date to that diary date. Save with **Ctrl+Enter** / **Cmd+Enter**.
 
-Commands: **TaskCalendar: Edit or create task in diary** and **TaskCalendar: Edit or create idea in diary**. Change the binding under Obsidian Settings → Hotkeys. On Android, use this command from the command palette or add it to the mobile toolbar; a hardware keyboard can use the shortcut. These commands are available in editing mode. A shortcut for the other record type shows a hint and does not convert or overwrite the entry. The old Ctrl+Shift+E command has been removed.
+Commands: **OneCalendar: Edit or create task in diary** and **OneCalendar: Edit or create idea in diary**. Change the binding under Obsidian Settings → Hotkeys. On Android, use this command from the command palette or add it to the mobile toolbar; a hardware keyboard can use the shortcut. These commands are available in editing mode. A shortcut for the other record type shows a hint and does not convert or overwrite the entry. The old Ctrl+Shift+E command has been removed.
 
 ## Daily note template
 
@@ -122,13 +144,13 @@ npm run build
 npm run install:test
 ```
 
-Install `main.js`, `manifest.json` and `styles.css` from dist into `.obsidian/plugins/task-calendar/`, then reload the plugin. The test installer targets only this project's AITestBed, not ResearchNotes. Runtime code does not depend on Node.js and the manifest permits mobile use.
+Install `main.js`, `manifest.json` and `styles.css` from dist into `.obsidian/plugins/one-calendar/`, then reload the plugin. The test installer targets only this project's AITestBed, not ResearchNotes. Runtime code does not depend on Node.js and the manifest permits mobile use.
 
 ## Mobile (0.5.2)
 
 Phones open on Overview; Calendar defaults to 3 days. All page buttons are visible; there is no More menu. Touch controls are enlarged, and task/idea capture collapses optional dates, reminders and projects. Existing records expand these fields when edited.
 
-In Obsidian mobile settings, add TaskCalendar: Capture an idea and Capture a task to the mobile toolbar. The separate Edit or create task in diary and Edit or create idea in diary commands also work from the mobile toolbar in a daily note; they use the cursor position and current diary date. Keyboard shortcuts Alt+T and Alt+I remain for physical keyboards.
+In Obsidian mobile settings, add OneCalendar: Capture an idea and Capture a task to the mobile toolbar. The separate Edit or create task in diary and Edit or create idea in diary commands also work from the mobile toolbar in a daily note; they use the cursor position and current diary date. Keyboard shortcuts Alt+T and Alt+I remain for physical keyboards.
 
 Returning to the foreground catches up repeating tasks and pending reminder sync. Timers do not guarantee work while Android suspends or closes Obsidian. Reminders require a configured Feishu or CalDAV calendar, successful synchronization before leaving Obsidian, and calendar-app notification permissions. A Reminder time alone does not schedule a native Android notification.
 
