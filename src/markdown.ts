@@ -23,6 +23,6 @@ export function patchMarkdown(raw: string, changes: Partial<Entity>, body?: stri
   for(const [key,value] of Object.entries(changes)) {
     if(value === undefined || value === '') doc.delete(key); else doc.set(key,value);
   }
-  validate(doc.toJS());
+  validate(doc.toJS() as Entity);
   return `---\n${doc.toString()}---\n${body ?? raw.slice(match[0].length)}`;
 }

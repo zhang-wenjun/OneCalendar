@@ -6,7 +6,8 @@ export interface DavResponse {status:number;text:string;headers:Record<string,st
 export type DavTransport=(method:string,url:string,headers:Record<string,string>,body?:string)=>Promise<DavResponse>;
 export interface DavCalendar {url:string;name:string;readOnly?:boolean}
 const utc=(d:Date)=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-const array=(v:any):any[]=>v===undefined?[]:Array.isArray(v)?v:[v];
+const array=(v:unknown):unknown[]=>v===undefined?[]:Array.isArray(v)?v as unknown[]:[v];
+const xml=(v:unknown):Record<string,unknown>=>v!==null&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const parser=new XMLParser({removeNSPrefix:true,ignoreAttributes:false,parseTagValue:false,trimValues:false,htmlEntities:true});
 export function calendarUrl(value:string){
   let raw=value.trim();if(!raw)throw Error('Enter a CalDAV server or calendar URL first.');
@@ -20,19 +21,21 @@ export function basicAuth(username:string,password:string){
   if(!username||username.includes(':')||!password)throw Error('Enter a CalDAV username and app password.');
   return 'Basic '+btoa(Array.from(new TextEncoder().encode(`${username}:${password}`),b=>String.fromCharCode(b)).join(''));
 }
+const xmlText=(v:unknown,fallback='')=>typeof v==='string'?v:fallback;
+function parseCalendar(text:string):unknown[]{const parsed:unknown=ICAL.parse(text);if(!Array.isArray(parsed))throw Error('Invalid iCalendar data.');return parsed as unknown[];}
 function responses(text:string){
   if(text.length>10_000_000||/<!DOCTYPE|<!ENTITY/i.test(text)||XMLValidator.validate(text)!==true)throw Error('Invalid or oversized CalDAV XML response.');
-  const document=parser.parse(text);if(!Object.hasOwn(document,'multistatus'))throw Error('Expected a CalDAV multistatus response. Check the calendar URL.');
-  return array(document.multistatus?.response);
+  const document=xml(parser.parse(text));if(!Object.hasOwn(document,'multistatus'))throw Error('Expected a CalDAV multistatus response. Check the calendar URL.');
+  return array(xml(document.multistatus).response).map(xml);
 }
-function properties(response:any){
-  const result:Record<string,any>={};
-  if(response.status&&!/\s2\d\d\s/.test(response.status))throw Error('CalDAV resource access failed. Check permissions.');
-  for(const p of array(response.propstat))if(/\s200\s/.test(p.status??''))Object.assign(result,p.prop);
+function properties(response:Record<string,unknown>){
+  const result:Record<string,unknown>={};
+  if(response.status&&!/\s2\d\d\s/.test(xmlText(response.status)))throw Error('CalDAV resource access failed. Check permissions.');
+  for(const p of array(response.propstat).map(xml))if(/\s200\s/.test(xmlText(p.status)))Object.assign(result,xml(p.prop));
   return result;
 }
 export function readCalendar(text:string,calendar:string,href:string,start:Date,end:Date):ExternalEvent[]{
-  let parsed;try{parsed=ICAL.parse(text.trim());}catch{
+  let parsed:unknown[];try{parsed=parseCalendar(text.trim());}catch{
     throw Error('CalDAV returned invalid iCalendar data; cache preserved.');
   }
   const root=new ICAL.Component(parsed);if(root.name!=='vcalendar')throw Error('Invalid iCalendar response.');
@@ -62,7 +65,7 @@ export function readCalendar(text:string,calendar:string,href:string,start:Date,
   return result;
 }
 function owned(text:string,key?:string){
-  const root=new ICAL.Component(ICAL.parse(text)),events=root.getAllSubcomponents('vevent');
+  const root=new ICAL.Component(parseCalendar(text)),events=root.getAllSubcomponents('vevent');
   const c=events[0],marker=c?.getFirstPropertyValue('x-taskcalendar-id');
   if(root.name!=='vcalendar'||events.length!==1||typeof marker!=='string'||!marker.startsWith('taskcalendar-')||c.getFirstPropertyValue('uid')!==`${marker}@taskcalendar`||(key&&marker!==key))throw Error('This calendar resource is not a OneCalendar reminder. Nothing was changed.');
   return {root,c,marker};
@@ -96,16 +99,16 @@ export class CalDav implements CalendarProvider {
   async discover():Promise<DavCalendar[]>{
     const props='<d:displayname/><d:resourcetype/><d:current-user-principal/><c:calendar-home-set/><d:current-user-privilege-set/><c:supported-calendar-component-set/>';
     const resolve=(href:string,base:string)=>{const u=new URL(href,base);if(u.origin!==new URL(this.url).origin||u.username||u.password||u.search||u.hash)throw Error('Discovery returned a different server. Enter that trusted server URL explicitly before connecting.');return u.href;};
-    const probe=async(url:string,depth='0')=>{const r=await this.request('PROPFIND',url,{Depth:depth,'Content-Type':'application/xml; charset=utf-8'},`<?xml version="1.0"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop>${props}</d:prop></d:propfind>`);this.ok(r,[207]);return responses(r.text).map(row=>({href:resolve(String(row.href??url),url),p:properties(row)}));};
+    const probe=async(url:string,depth='0')=>{const r=await this.request('PROPFIND',url,{Depth:depth,'Content-Type':'application/xml; charset=utf-8'},`<?xml version="1.0"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop>${props}</d:prop></d:propfind>`);this.ok(r,[207]);return responses(r.text).map(row=>({href:resolve(xmlText(row.href,url),url),p:properties(row)}));};
     const calendars=new Map<string,DavCalendar>();
-    const collect=(rows:Awaited<ReturnType<typeof probe>>)=>{for(const {href,p}of rows){if(!p.resourcetype||!Object.hasOwn(p.resourcetype,'calendar'))continue;const components=array(p['supported-calendar-component-set']?.comp);if(components.length&&!components.some(c=>String(c['@_name']).toUpperCase()==='VEVENT'))continue;
-      const privileges=p['current-user-privilege-set'];const write=privileges===undefined?undefined:array(privileges.privilege).some(v=>['all','write','write-content','bind'].some(k=>Object.hasOwn(v,k)));
-      const url=calendarUrl(href);calendars.set(url,{url,name:String(p.displayname||url),readOnly:write===undefined?undefined:!write});}};
+    const collect=(rows:Awaited<ReturnType<typeof probe>>)=>{for(const {href,p}of rows){if(!p.resourcetype||!Object.hasOwn(xml(p.resourcetype),'calendar'))continue;const components=array(xml(p['supported-calendar-component-set']).comp);if(components.length&&!components.some(c=>String(xml(c)['@_name']).toUpperCase()==='VEVENT'))continue;
+      const privileges=p['current-user-privilege-set'];const write=privileges===undefined?undefined:array(xml(privileges).privilege).some(v=>['all','write','write-content','bind'].some(k=>Object.hasOwn(xml(v),k)));
+      const url=calendarUrl(href);calendars.set(url,{url,name:xmlText(p.displayname,url),readOnly:write===undefined?undefined:!write});}};
     let rows:Awaited<ReturnType<typeof probe>>;
     try{rows=await probe(this.url);}catch(e){if(!/HTTP (404|405)/.test((e as Error).message))throw e;rows=await probe(new URL('/.well-known/caldav',this.url).href);}
     collect(rows);if(calendars.size)return [...calendars.values()];
     const homes=new Set<string>(),principals=new Set<string>();
-    const links=(items:typeof rows)=>{for(const {href,p}of items){for(const h of array(p['calendar-home-set']?.href))if(typeof h==='string')homes.add(resolve(h,href));for(const h of array(p['current-user-principal']?.href))if(typeof h==='string')principals.add(resolve(h,href));}};
+    const links=(items:typeof rows)=>{for(const {href,p}of items){for(const h of array(xml(p['calendar-home-set']).href))if(typeof h==='string')homes.add(resolve(h,href));for(const h of array(xml(p['current-user-principal']).href))if(typeof h==='string')principals.add(resolve(h,href));}};
     links(rows);
     if(!homes.size)for(const principal of [...principals].slice(0,8)){const result=await probe(principal);collect(result);links(result);}
     for(const home of [...homes].slice(0,8))collect(await probe(home,'1'));
@@ -115,7 +118,7 @@ export class CalDav implements CalendarProvider {
   }
   async testConnection(){
     const r=await this.request('PROPFIND',this.url,{Depth:'0','Content-Type':'application/xml; charset=utf-8'},'<?xml version="1.0"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><d:displayname/><d:resourcetype/></d:prop></d:propfind>');this.ok(r,[207]);
-    const found=responses(r.text).map(properties).find(p=>p.resourcetype&&Object.hasOwn(p.resourcetype,'calendar'));if(!found)throw Error('Enter the URL of a specific CalDAV calendar, not a server homepage or ICS subscription.');return String(found.displayname||'Calendar');
+    const found=responses(r.text).map(properties).find(p=>p.resourcetype&&Object.hasOwn(xml(p.resourcetype),'calendar'));if(!found)throw Error('Enter the URL of a specific CalDAV calendar, not a server homepage or ICS subscription.');return xmlText(found.displayname,'Calendar');
   }
   async list(calendar:string,start:Date,end:Date){
     const url=this.collection(calendar),a=utc(start),b=utc(end);
@@ -123,7 +126,7 @@ export class CalDav implements CalendarProvider {
     let r=await this.request('REPORT',url,{Depth:'1','Content-Type':'application/xml; charset=utf-8'},body);this.ok(r,[207]);
     // Some servers reject calendar-data expansion as an unavailable property.
     // Retry without expansion, retaining strict recurrence validation below.
-    if(responses(r.text).some(row=>array(row.propstat).some(p=>/\s404\s/.test(p.status??'')&&Object.hasOwn(p.prop??{},'calendar-data')))){
+    if(responses(r.text).some(row=>array(row.propstat).map(xml).some(p=>/\s404\s/.test(xmlText(p.status))&&Object.hasOwn(xml(p.prop),'calendar-data')))){
       r=await this.request('REPORT',url,{Depth:'1','Content-Type':'application/xml; charset=utf-8'},body.replace(/<c:calendar-data>.*?<\/c:calendar-data>/,'<c:calendar-data/>'));this.ok(r,[207]);
     }
     let rows=responses(r.text);
@@ -133,7 +136,7 @@ export class CalDav implements CalendarProvider {
       const listing=await this.request('PROPFIND',url,{Depth:'1','Content-Type':'application/xml; charset=utf-8'},'<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getetag/><d:getcontenttype/></d:prop></d:propfind>');this.ok(listing,[207]);
       rows=responses(listing.text).filter(row=>{
         if(typeof row.href!=='string')throw Error('CalDAV returned a resource without a URL; cache preserved.');
-        const p=properties(row);return calendarUrl(new URL(row.href,url).href)!==url&&!Object.hasOwn(p.resourcetype??{},'collection');
+        const p=properties(row);return calendarUrl(new URL(row.href,url).href)!==url&&!Object.hasOwn(xml(p.resourcetype),'collection');
       });
     }
     if(rows.length>2000)throw Error('CalDAV returned too many resources; cache preserved. Use a smaller calendar.');
@@ -156,12 +159,12 @@ export class CalDav implements CalendarProvider {
       const p=properties(response),data=p['calendar-data'];
       // Attributes such as content-type and version make fast-xml-parser return
       // an object containing #text rather than a plain string.
-      let text=typeof data==='string'?data:data?.['#text'];
+      let text=typeof data==='string'?data:xml(data)['#text'];
       if(typeof text!=='string'&&typeof response.href==='string'){
         const resource=await this.request('GET',this.resource(response.href));this.ok(resource,[200]);text=resource.text;
       }
       if(typeof text!=='string'){
-        const codes=array(response.propstat).map(s=>String(s.status??'').match(/\b\d{3}\b/)?.[0]).filter(Boolean).join(', ');
+        const codes=array(response.propstat).map(s=>xmlText(xml(s).status).match(/\b\d{3}\b/)?.[0]).filter(Boolean).join(', ');
         throw Error(`CalDAV did not return event data (property status: ${codes||'unknown'}); cache preserved.`);
       }
       const href=this.resource(String(response.href));events.push(...readCalendar(text,url,href,start,end));

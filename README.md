@@ -1,8 +1,10 @@
-# OneCalendar 0.9.0
+# OneCalendar 0.9.1
 
 A free, MIT-licensed Obsidian plugin for tasks, quick ideas, lightweight projects and calendars. Your notes remain Markdown files. The plugin supports desktop and Android, with an English interface.
 
 ## Install
+
+Requires Obsidian **1.11.4 or later**.
 
 Download `main.js`, `manifest.json` and `styles.css` from the [latest GitHub release](https://github.com/zhang-wenjun/OneCalendar/releases/latest). Place all three files in `<vault>/.obsidian/plugins/one-calendar/`, then enable **OneCalendar** in Obsidian's Community plugins settings. If upgrading from the development TaskCalendar plugin, follow the migration notes below before enabling it.
 
@@ -170,3 +172,9 @@ Settings now displays the plugin version and a dedicated CalDAV setup panel. Con
 
 Discovery follows same-origin current-user-principal and calendar-home-set links; direct calendar URLs remain supported. Cross-origin discovery requires explicitly entering the trusted target server. A successful discovery does not prove write access. No real Feishu account or Android notification delivery was used in automated tests.
 
+
+## Network and privacy
+
+Calendar connections are optional. Feishu requests go to `open.feishu.cn`; CalDAV requests go to the server you configure. Reading sends authentication, calendar identifiers and the requested date range. Enabling reminder writes sends the task title, reminder time and a stable identifier to that calendar service. Imported events are cached in the vault's plugin data. CalDAV Basic authentication uses Base64 encoding over HTTPS (HTTP is allowed only for localhost tests); this is protocol encoding, not encryption or executable code. Credentials stay in session memory or Obsidian secret storage.
+
+OneCalendar indexes vault Markdown to find diary sections and its project/event records. Clipboard writes occur only when you use a copy-link action. There is no analytics or telemetry.

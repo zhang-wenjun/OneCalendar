@@ -91,7 +91,7 @@ export class Editor extends Modal {
           savedEvent=saved;
           if(statusChanged)await this.store.afterStatus(saved);
         } else if(this.kind==='series') await this.store.createSeries(fields,body.value);
-        else savedEvent=await this.store.create(make(this.kind,fields.title!,{status:this.kind==='idea'?'inbox':this.kind==='task'?'todo':undefined,...fields}),body.value,this.captureDay);
+        else savedEvent=await this.store.create(make(this.kind,fields.title,{status:this.kind==='idea'?'inbox':this.kind==='task'?'todo':undefined,...fields}),body.value,this.captureDay);
         if(this.kind==='series')await this.store.tick();
         if(exportCalendar&&savedEvent)await shareEventCalendar(this.app,savedEvent);
         this.close();
@@ -105,7 +105,7 @@ export class Editor extends Modal {
       this.contentEl.createEl('p',{cls:'tc-muted',text:'Import into your calendar to enable reminders. Later edits need a new import.'});
     }
     this.scope.register(['Mod'],'Enter',()=>{save.click();return false;});
-    setTimeout(()=> {if(this.contentEl.isConnected)(title ?? body).focus();},50);
+    window.setTimeout(()=> {if(this.contentEl.isConnected)(title ?? body).focus();},50);
   }
   onClose(){this.contentEl.empty();}
 }

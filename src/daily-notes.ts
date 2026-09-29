@@ -13,7 +13,7 @@ export class DailyNotes {
   async configure(folder?:string,format?:string){
     let core:Partial<DiaryConfig>={};
     const path=`${this.app.vault.configDir}/daily-notes.json`;
-    if(await this.app.vault.adapter.exists(path))core=JSON.parse(await this.app.vault.adapter.read(path));
+    if(await this.app.vault.adapter.exists(path))core=JSON.parse(await this.app.vault.adapter.read(path)) as Partial<DiaryConfig>;
     this.config={folder:folder?.trim()||core.folder||'diary',format:format?.trim()||core.format||'YYYY-MM-DD',template:core.template||''};
     if(core.folder===''&&!folder?.trim())this.config.folder='';
   }
@@ -38,7 +38,7 @@ export class DailyNotes {
       }
       let body=diaryTemplate.replace('{{date:YYYY-MM-DD}}',day);
       if(this.config.template){const template=vault.getAbstractFileByPath(this.config.template.replace(/\.md$/,'')+'.md');if(!(template instanceof TFile))throw Error('Daily note template missing. Check Daily notes settings.');
-        body=(await vault.read(template)).replace(/\{\{date(?::([^}]+))?\}\}/g,(_,format)=>moment(day,'YYYY-MM-DD').format(format||this.config.format)).replace(/\{\{time(?::([^}]+))?\}\}/g,(_,format)=>moment().format(format||'HH:mm')).replace(/\{\{title\}\}/g,path.split('/').pop()!.slice(0,-3));}
+        body=(await vault.read(template)).replace(/\{\{date(?::([^}]+))?\}\}/g,(_:string,format:string|undefined)=>moment(day,'YYYY-MM-DD').format(format||this.config.format)).replace(/\{\{time(?::([^}]+))?\}\}/g,(_:string,format:string|undefined)=>moment().format(format||'HH:mm')).replace(/\{\{title\}\}/g,path.split('/').pop()!.slice(0,-3));}
       for(const section of ['Tasks','Journal','Ideas'] as const)if(!diarySections(body).some(s=>s.name===section))body=appendDiaryEntry(body,section,'');
       let dir='';for(const part of path.split('/').slice(0,-1)){dir=dir?`${dir}/${part}`:part;if(!vault.getAbstractFileByPath(dir))await vault.createFolder(dir);}
       // Another open request can finish creating the note while the template is read.

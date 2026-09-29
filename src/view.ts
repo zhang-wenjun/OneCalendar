@@ -61,8 +61,8 @@ export class CalendarView extends ItemView {
   }
   searchBox(root:HTMLElement){
     const i=root.createEl('input',{type:'search',placeholder:'Search titles or text...',value:this.search,attr:{'aria-label':'Search'}});
-    let timer:ReturnType<typeof setTimeout>;
-    i.oninput=()=>{this.search=i.value;clearTimeout(timer);timer=setTimeout(()=>{const n=i.selectionStart;this.render();const next=this.contentEl.querySelector<HTMLInputElement>('input[type=search]');next?.focus();if(n!==null)next?.setSelectionRange(n,n);},180);};
+    let timer:number;
+    i.oninput=()=>{this.search=i.value;window.clearTimeout(timer);timer=window.setTimeout(()=>{const n=i.selectionStart;this.render();const next=this.contentEl.querySelector<HTMLInputElement>('input[type=search]');next?.focus();if(n!==null)next?.setSelectionRange(n,n);},180);};
   }
   tasks(){return this.plugin.store.all('task').filter(r=>matchesTask(r.data,this.filter)&&(!this.project||r.data.projects?.includes(this.project))&&this.matches(r)).sort((a,b)=>(a.data.plan||a.data.due||'9999').localeCompare(b.data.plan||b.data.due||'9999')||b.data.created.localeCompare(a.data.created));}
   matches(r:RecordFile){return !this.search||`${r.data.title}\n${r.body}`.toLowerCase().includes(this.search.toLowerCase());}
@@ -79,7 +79,7 @@ export class CalendarView extends ItemView {
     if(d.due)meta.createSpan({text:`Due ${d.due}`,cls:active(d)&&d.due<dateKey()?'tc-chip tc-danger':'tc-chip'});
     if(d.series)meta.createSpan({text:'↻ Repeat',cls:'tc-chip'});
     if(r.diary)meta.createSpan({text:'From diary',cls:'tc-chip'});
-    for(const p of d.projects ?? []){let name='Missing project';try{name=this.plugin.store.find(p)?.data.title ?? name;}catch{}button(meta,name,()=>{this.page='project';this.project=p;this.render();},'tc-chip');}
+    for(const p of d.projects ?? []){let name='Missing project';try{name=this.plugin.store.find(p)?.data.title ?? name;}catch{/* A missing project remains visible with its fallback label. */}button(meta,name,()=>{this.page='project';this.project=p;this.render();},'tc-chip');}
     if(d.remind){const reminder=this.plugin.store.lookup(`rem_${d.id}`);meta.createSpan({text:`Reminder ${new Date(d.remind).toLocaleString('en-US')} · ${reminder?.data.status ?? 'Pending sync'}`,cls:'tc-chip'});if(reminder?.data.error)meta.createSpan({text:String(reminder.data.error),cls:'tc-danger'});}
     const actions=card.createDiv({cls:'tc-card-actions'});
     const status=actions.createEl('select',{attr:{'aria-label':`${d.title} Status`}});for(const [k,v]of Object.entries(labels))status.createEl('option',{value:k,text:v});status.value=d.status ?? 'todo';
@@ -216,14 +216,14 @@ export class CalendarView extends ItemView {
       for(let m=0;m<1440;m+=30){const slot=col.createEl('button',{cls:'tc-time-slot',attr:{'aria-label':`${day} ${atMinute(day,m).slice(-5)} Add event`,type:'button'}});slot.onclick=e=>{if(Date.now()>=suppressClickUntil&&(e.detail===0||Platform.isMobile))this.newTimedEvent(day,m,m);};}
       let anchor:number|undefined,selection:HTMLElement|undefined;
       const minute=(e:PointerEvent)=>Math.min(1410,Math.max(0,Math.floor((e.clientY-col.getBoundingClientRect().top)/30)*30));
-      col.onpointerdown=e=>{if(Platform.isMobile||e.button!==0||e.pointerType==='touch'||(e.target as HTMLElement).closest('.tc-week-event'))return;e.preventDefault();anchor=minute(e);selection=col.createDiv({cls:'tc-time-selection'});selection.style.top=`${anchor}px`;selection.style.height='30px';col.setPointerCapture(e.pointerId);};
+      col.onpointerdown=e=>{if(Platform.isMobile||e.button!==0||e.pointerType==='touch'||(e.target as HTMLElement).closest('.tc-week-event'))return;e.preventDefault();anchor=minute(e);selection=col.createDiv({cls:'tc-time-selection'});selection.style.top=`${anchor}px`;col.setPointerCapture(e.pointerId);};
       col.onpointermove=e=>{if(e.pointerType==='touch')return;if(anchor===undefined||!selection)return;const m=minute(e);selection.style.top=`${Math.min(anchor,m)}px`;selection.style.height=`${Math.abs(anchor-m)+30}px`;const range=timeRange(day,anchor,m);selection.setText(`${range.start.slice(-5)} — ${range.end.slice(-5)}`);};
       col.onpointerup=e=>{if(e.pointerType==='touch')return;if(anchor===undefined)return;const a=anchor;anchor=undefined;selection?.remove();selection=undefined;col.releasePointerCapture(e.pointerId);this.newTimedEvent(day,a,minute(e));};
       col.onpointercancel=e=>{if(e.pointerType==='touch')return;anchor=undefined;selection?.remove();selection=undefined;};
-      let hold:ReturnType<typeof setTimeout>|undefined,origin:{x:number;y:number}|undefined,lastY=0;
-      const cancelHold=()=>{if(hold)clearTimeout(hold);hold=undefined;};
+      let hold:number|undefined,origin:{x:number;y:number}|undefined,lastY=0;
+      const cancelHold=()=>{if(hold)window.clearTimeout(hold);hold=undefined;};
       const touchMinute=(y:number)=>Math.min(1410,Math.max(0,Math.floor((y-col.getBoundingClientRect().top)/30)*30));
-      col.addEventListener('touchstart',e=>{if(e.touches.length!==1||(e.target as HTMLElement).closest('.tc-week-event'))return;const t=e.touches[0];origin={x:t.clientX,y:t.clientY};lastY=t.clientY;cancelHold();hold=setTimeout(()=>{anchor=touchMinute(lastY);selection=col.createDiv({cls:'tc-time-selection'});selection.style.top=`${anchor}px`;selection.style.height='30px';},450);},{passive:true});
+      col.addEventListener('touchstart',e=>{if(e.touches.length!==1||(e.target as HTMLElement).closest('.tc-week-event'))return;const t=e.touches[0];origin={x:t.clientX,y:t.clientY};lastY=t.clientY;cancelHold();hold=window.setTimeout(()=>{anchor=touchMinute(lastY);selection=col.createDiv({cls:'tc-time-selection'});selection.style.top=`${anchor}px`;},450);},{passive:true});
       col.addEventListener('touchmove',e=>{const t=e.touches[0];if(!t)return;lastY=t.clientY;if(anchor===undefined){if(origin&&Math.hypot(t.clientX-origin.x,t.clientY-origin.y)>8)cancelHold();return;}e.preventDefault();const m=touchMinute(lastY);selection!.style.top=`${Math.min(anchor,m)}px`;selection!.style.height=`${Math.abs(m-anchor)+30}px`;},{passive:false});
       col.addEventListener('touchend',e=>{cancelHold();origin=undefined;if(anchor===undefined)return;e.preventDefault();const a=anchor;anchor=undefined;selection?.remove();selection=undefined;suppressClickUntil=Date.now()+700;this.newTimedEvent(day,a,touchMinute(lastY));},{passive:false});
       col.addEventListener('touchcancel',()=>{cancelHold();origin=undefined;anchor=undefined;selection?.remove();selection=undefined;});

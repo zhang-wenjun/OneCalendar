@@ -7,7 +7,7 @@ const assets=`artifacts/github-release-${manifest.version}`,bundle=`release/OneC
 await mkdir(assets,{recursive:true});await mkdir(`${bundle}/docs`,{recursive:true});
 for(const file of ['main.js','manifest.json','styles.css','LICENSE','THIRD-PARTY-NOTICES.txt']){
  const source=['main.js','manifest.json','styles.css'].includes(file)?`dist/${file}`:file;
- await copyFile(source,`${assets}/${file}`);await copyFile(source,`${bundle}/${file}`);
+ if(['main.js','manifest.json','styles.css'].includes(file))await copyFile(source,`${assets}/${file}`);await copyFile(source,`${bundle}/${file}`);
 }
 for(const file of ['README.md','versions.json'])await copyFile(file,`${bundle}/${file}`);
 for(const file of ['RELEASING.md','CALDAV.md',`RELEASE_NOTES_${manifest.version}.md`])await copyFile(`docs/${file}`,`${bundle}/docs/${file}`);

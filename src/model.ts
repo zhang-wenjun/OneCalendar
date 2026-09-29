@@ -30,11 +30,11 @@ export function validate(e: Entity) {
   if (!Object.hasOwn(folders,e.tc) || !/^[a-zA-Z0-9_-]+$/.test(e.id || '')) throw new Error('Invalid record type or stable ID.');
   if (typeof e.title !== 'string' || !e.title.trim()) throw new Error('Title is required.');
   if(e.format!==undefined&&e.format!==1)throw new Error('Unsupported data version. Update the plugin first.');
-  for(const k of ['created','updated'])if(typeof e[k]!=='string'||!Number.isFinite(Date.parse(e[k] as string)))throw new Error(`${k} must be a valid timestamp`);
+  for(const k of ['created','updated'])if(typeof e[k]!=='string'||!Number.isFinite(Date.parse(e[k])))throw new Error(`${k} must be a valid timestamp`);
   for(const k of ['status','project','source','task','series','reminderTime','externalId','calendarId','desired','synced','error'])if(e[k]!==undefined&&typeof e[k]!=='string')throw new Error(`${k} must be a string`);
   if (e.projects !== undefined && (!Array.isArray(e.projects) || e.projects.some(x=>typeof x!=='string'))) throw new Error('projects must be a list of project IDs');
   for (const k of ['plan','due','next','occurrence'] as const) if (e[k] !== undefined && e[k] !== '' && !validDate(e[k])) throw new Error(`${k} invalid date`);
-  for (const k of ['start','end','remind'] as const) if (e[k] !== undefined && e[k] !== '' && (typeof e[k]!=='string'||!Number.isFinite(Date.parse(e[k]!)))) throw new Error(`${k} invalid time`);
+  for (const k of ['start','end','remind'] as const) if (e[k] !== undefined && e[k] !== '' && (typeof e[k]!=='string'||!Number.isFinite(Date.parse(e[k])))) throw new Error(`${k} invalid time`);
   for(const k of ['archived','paused','ended'])if(e[k]!==undefined&&typeof e[k]!=='boolean')throw new Error(`${k} must be true or false`);
   if (e.tc==='task' && !Object.hasOwn(labels, e.status ?? 'todo')) throw new Error('Invalid task status');
   if (e.tc==='event' && (!e.start || !e.end || Date.parse(e.end)<=Date.parse(e.start))) throw new Error('Event end must be after its start');

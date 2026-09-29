@@ -10,7 +10,7 @@ export function hiddenMeta(value:unknown){return JSON.stringify(value).replace(/
 export function diaryTasks(path:string,raw:string,day:string,details?:Details,legacy=false):RecordFile[]{
   const out:RecordFile[]=[],lines=raw.split(/\r?\n/);const seen=new Map<string,number>(),reserved=new Set<string>();
   const sections=diarySections(raw);
-  for(const line of lines){const m=line.match(marker);if(m){try{const id=JSON.parse(m[1]).id;if(typeof id==='string')reserved.add(id);}catch{}}}
+  for(const line of lines){const m=line.match(marker);if(m){try{const parsed:unknown=JSON.parse(m[1]);const id=parsed&&typeof parsed==='object'?'id' in parsed?parsed.id:undefined:undefined;if(typeof id==='string')reserved.add(id);}catch{/* Malformed legacy markers are validated when their entry is indexed. */}}}
   let fence='',frontmatter=false,comment=false;
   for(let index=0;index<lines.length;index++){
     const section=sections.find(s=>index>s.start&&index<s.end)?.name;
@@ -27,7 +27,7 @@ export function diaryTasks(path:string,raw:string,day:string,details?:Details,le
     const idea=legacy?line.match(/^(\s*[-*+]\s+)#(?:闪念|idea)\s+(.+)$/):section==='Ideas'?line.match(/^(\s*-\s+)(?!\s*\[)(?:#idea\s+)?(\S.*)$/):null;
     if(!task&&!idea)continue;
     const visible=task?task[3]:idea![2],suffix=visible.match(marker);let meta:Record<string,unknown>={};
-    if(suffix){try{meta=JSON.parse(suffix[1]);if(!meta||typeof meta!=='object'||Array.isArray(meta))throw Error();}catch{throw Error(`Invalid metadata at diary line ${index+1}; original preserved`);}}
+    if(suffix){try{meta=JSON.parse(suffix[1]) as Record<string,unknown>;if(!meta||typeof meta!=='object'||Array.isArray(meta))throw Error();}catch{throw Error(`Invalid metadata at diary line ${index+1}; original preserved`);}}
     const title=visible.replace(marker,'').trim();if(!title)continue;
     const kind=task?'task':'idea',key=textHash(`${path}\n${kind==='task'?'':kind+'\n'}${title}`);let count=seen.get(key)??0;
     if(typeof meta.id!=='string')while(reserved.has(`diary_${key}_${count}`))count++;seen.set(key,count+1);
@@ -54,7 +54,7 @@ export function patchDiary(raw:string,baseline:RecordFile,changes:Partial<Entity
   const current=diaryTasks(baseline.path,raw,baseline.diary!.day,details).filter(r=>r.data.id===baseline.data.id);
   if(current.length!==1||current[0].raw!==baseline.raw)throw Error('This diary entry changed. Reopen it before saving; nothing was overwritten.');
   const rec=current[0],data={...rec.data,...changes,updated:new Date().toISOString()};validate(data);
-  const prefix=rec.raw.match(/^(\s*[-*+]\s+)/)![1],lines=raw.split(/(?<=\n)/),end=rec.diary!.endLine??rec.diary!.line+1;
+  const prefix=rec.raw.match(/^(\s*[-*+]\s+)/)![1],lines=(raw.match(/[^\n]*\n|[^\n]+$/g) ?? ['']),end=rec.diary!.endLine??rec.diary!.line+1;
   const old=lines[end-1],ending=old.endsWith('\r\n')?'\r\n':old.endsWith('\n')?'\n':'',eol=raw.includes('\r\n')?'\r\n':'\n';
   lines.splice(rec.diary!.line,end-rec.diary!.line,diaryEntry(data,body??rec.body,rec.diary!.day,prefix,details).replace(/\n/g,eol)+ending);return lines.join('');
 }

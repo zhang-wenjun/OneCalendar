@@ -8,7 +8,7 @@ export class Details {
   constructor(public files:Files,public path:string){}
   parse(raw:string){
     const m=raw.match(/```json\s*\n([\s\S]*?)\n```/);if(!m)throw Error('Details file is malformed. Nothing was overwritten.');
-    const doc=JSON.parse(m[1]);if(doc.version!==1||!doc.records||typeof doc.records!=='object'||Array.isArray(doc.records))throw Error('Invalid details version or record format.');
+    const doc=JSON.parse(m[1]) as {version?:unknown;records?:unknown};if(!doc||doc.version!==1||!doc.records||typeof doc.records!=='object'||Array.isArray(doc.records))throw Error('Invalid details version or record format.');
     const ids=new Set<string>();for(const [token,value]of Object.entries(doc.records)){
       const row=value as Entity;if(!/^[a-z0-9]{8}$/.test(token)||!row||typeof row.id!=='string'||ids.has(row.id))throw Error('Invalid or duplicate ID in details.');ids.add(row.id);
     }return doc.records as Record<string,Partial<Entity>>;

@@ -48,7 +48,7 @@ function renderContents(root:HTMLElement,plugin:OneCalendar,redraw:()=>void){
   };
   const apply=async()=>{
     const address=calendarUrl(server.value),user=username.value.trim(),entered=password.value;
-    let previous='';try{previous=calendarUrl(plugin.settings.caldavUrl??'');}catch{}
+    let previous='';try{previous=calendarUrl(plugin.settings.caldavUrl??'');}catch{/* An invalid previous address has no reusable credentials. */}
     if(previous===address)plugin.settings.caldavUrl=address;
     else await plugin.changeCalDavConnection('caldavUrl',address);
     await plugin.changeCalDavConnection('caldavUsername',user);
@@ -87,6 +87,6 @@ function renderContents(root:HTMLElement,plugin:OneCalendar,redraw:()=>void){
   }));
   selection.onchange=()=>{const url=selection.value;if(url)void run('Selecting calendar…',async()=>{unchanged();await plugin.selectCalDav(url);preview.empty();message('Calendar selected. Click Pull events now.');});};
   options();message(plugin.caldavStatus);
-  panel.createEl('p',{cls:'tc-muted',text:'Connection discovery and pulling are read-only. Automatic refresh is controlled below. CalDAV requires Basic authentication; service-specific write restrictions still apply. Android notifications require calendar synchronization and a calendar app.'});
+  panel.createEl('p',{cls:'tc-muted',text:'Connection discovery and pulling are read-only. Automatic refresh is controlled below. CalDAV requires basic authentication; service-specific write restrictions still apply. Android notifications require calendar synchronization and a calendar app.'});
 }
 

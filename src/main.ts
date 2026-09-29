@@ -4,7 +4,7 @@ import { Platform, Plugin, TFile, TFolder, Notice, PluginSettingTab, Setting, Ap
 import { Store, Files } from './store';
 import { Editor, button } from './forms';
 import { CalendarView, VIEW } from './view';
-import { ExternalEvent, Feishu, Reminders } from './calendar';
+import { ExternalEvent, FeishuData, Feishu, Reminders } from './calendar';
 import { dateKey, addDays } from './model';
 import { runJournalQA, runRevisionQA } from './qa';
 import { DailyNotes } from './daily-notes';
@@ -23,9 +23,9 @@ export default class OneCalendar extends Plugin {
   refreshDue(now=Date.now()){return now-this.lastRefreshAttempt>=refreshMinutes(this.settings.refreshMinutes)*60000;}
   calendarStatus='No calendar connected. Local features work offline.'; sessionToken=''; sessionCalDavPassword=''; caldavStatus='Enter your server, username and app password, then connect.'; private savedAt=''; private syncing=false; private timer?:number; private disposed=false; private ready=false;
   async onload(){
-    const current=await this.loadData();const imported=await renamedPluginData(current,this.app.vault.adapter,this.app.vault.configDir);
+    const current:unknown=await this.loadData();const imported=await renamedPluginData(current,this.app.vault.adapter,this.app.vault.configDir);
     if(current==null&&imported)await this.saveData(imported);
-    const data=imported??{};this.settings={...defaults,...data.settings};this.externalEvents=data.externalEvents ?? [];this.savedAt=data.savedAt ?? '';
+    const data=(imported??{}) as {settings?:Partial<Settings>;externalEvents?:ExternalEvent[];savedAt?:string};this.settings={...defaults,...data.settings};this.externalEvents=data.externalEvents ?? [];this.savedAt=data.savedAt ?? '';
     if(this.settings.caldavSources===undefined&&this.settings.caldavCalendarUrl){const s=this.currentSource();this.settings.caldavSources=[s];this.externalEvents=this.externalEvents.map(e=>e.provider==='caldav'&&e.calendarId===s.url?{...e,sourceId:s.id,calendarName:s.name,color:s.color}:e);}
     if(this.savedAt)this.calendarStatus=`Cache updated: ${new Date(this.savedAt).toLocaleString('en-US')}`;
     const vault=this.app.vault;
@@ -51,7 +51,7 @@ export default class OneCalendar extends Plugin {
     }});
     this.registerObsidianProtocolHandler('one-calendar-idea',()=>this.requestIdeaCapture());
     this.registerObsidianProtocolHandler('task-calendar-idea',()=>this.requestIdeaCapture());
-    this.addCommand({id:'copy-idea-link',name:'Copy Ideas shortcut link',callback:()=>void this.run(async()=>{await navigator.clipboard.writeText(this.ideaCaptureLink());new Notice('Ideas shortcut link copied.');})});
+    this.addCommand({id:'copy-idea-link',name:'Copy ideas shortcut link',callback:()=>void this.run(async()=>{await navigator.clipboard.writeText(this.ideaCaptureLink());new Notice('Ideas shortcut link copied.');})});
     this.addCommand({id:'capture-idea',name:'Capture an idea',icon:'lightbulb',callback:()=>this.capture('idea')});
     this.addCommand({id:'capture-task',name:'Capture a task',icon:'check-square',callback:()=>this.capture('task')});
     this.addCommand({id:'create-event',name:'New event',callback:()=>new Editor(this.app,this.store,'event').open()});
@@ -151,9 +151,10 @@ export default class OneCalendar extends Plugin {
     if(!this.token())return undefined;
     return new Feishu(async(method,path,body)=>{
       const result=await requestUrl({url:`https://open.feishu.cn/open-apis${path}`,method,headers:{Authorization:`Bearer ${this.token()}`,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,throw:false});
-      if(result.status===401||result.json?.code===99991663||result.json?.code===99991668)throw new Error('Feishu authorization expired. Renew your access token.');
-      if(result.status<200||result.status>=300||result.json?.code!==0)throw new Error(`Feishu request failed (HTTP ${result.status}, code ${result.json?.code ?? 'Unknown'}). Check permissions and calendar settings.`);
-      return result.json.data ?? {};
+      const response=result.json as {code?:number;data?:FeishuData};
+      if(result.status===401||response?.code===99991663||response?.code===99991668)throw new Error('Feishu authorization expired. Renew your access token.');
+      if(result.status<200||result.status>=300||response?.code!==0)throw new Error(`Feishu request failed (HTTP ${result.status}, code ${response?.code ?? 'Unknown'}). Check permissions and calendar settings.`);
+      return response.data ?? {};
     });
   }
   async saveSettings(){await this.saveData({settings:this.settings,externalEvents:this.externalEvents,savedAt:this.savedAt});}
@@ -200,36 +201,37 @@ export default class OneCalendar extends Plugin {
 }
 class CalendarSettings extends PluginSettingTab {
   constructor(app:App,public plugin:OneCalendar){super(app,plugin);}
-  display(){
-    const el=this.containerEl;el.empty();el.addClass('tc-settings');el.createEl('h2',{text:`OneCalendar ${this.plugin.manifest.version}`});
+  display(){this.renderSettings();}
+  private renderSettings(){
+    const el=this.containerEl;el.empty();el.addClass('tc-settings');new Setting(el).setName(`OneCalendar ${this.plugin.manifest.version}`).setHeading();
     el.createEl('p',{text:'Tasks and ideas live in daily notes. Project memos live in Projects/<name>/<name>-Memo.md. Sync diary, Projects and TaskCalendar together. Calendar write access depends on the service. Android notification delivery has not been device-tested.'});
-    el.createEl('h3',{text:'Diary'});
+    new Setting(el).setName('Diary').setHeading();
     el.createEl('p',{text:'Uses the Daily notes folder, date format and template, or diary/YYYY-MM-DD.md by default. Only checkboxes under Tasks and bullets under Ideas are indexed. Journal stays private to your writing.'});
-    new Setting(el).setName('Override diary folder').setDesc('Leave blank to use Daily notes settings, e.g. diary.').addText(c=>c.setValue(this.plugin.settings.diaryFolder??'').onChange(v=>{this.plugin.settings.diaryFolder=v;}));
-    new Setting(el).setName('Override diary date format').setDesc('Leave blank to use Daily notes settings, e.g. YYYY/MM/YYYY-MM-DD.').addText(c=>c.setValue(this.plugin.settings.diaryFormat??'').onChange(v=>{this.plugin.settings.diaryFormat=v;}));
+    new Setting(el).setName('Override diary folder').setDesc('Leave blank to use the daily notes folder.').addText(c=>c.setValue(this.plugin.settings.diaryFolder??'').onChange(v=>{this.plugin.settings.diaryFolder=v;}));
+    new Setting(el).setName('Override diary date format').setDesc('Leave blank to use the daily notes date format.').addText(c=>c.setValue(this.plugin.settings.diaryFormat??'').onChange(v=>{this.plugin.settings.diaryFormat=v;}));
     button(el,'Apply diary settings and rescan',async()=>{await this.plugin.diary.configure(this.plugin.settings.diaryFolder,this.plugin.settings.diaryFormat);await this.plugin.saveSettings();await this.plugin.store.init();new Notice('Diary index updated');});
-    el.createEl('h3',{text:'Third-party calendars'});
-    new Setting(el).setName('Calendar provider').setDesc('Read external events and write task reminders. Existing reminders stay with their original provider.').addDropdown(c=>c.addOptions({feishu:'Feishu',caldav:'CalDAV'}).setValue(this.plugin.settings.calendarProvider??'feishu').onChange(async v=>{this.plugin.settings.calendarProvider=v as 'feishu'|'caldav';this.plugin.clearCalendarCache();await this.plugin.saveSettings();this.plugin.store.changed();this.display();}));
+    new Setting(el).setName('Third-party calendars').setHeading();
+    new Setting(el).setName('Calendar provider').setDesc('Read external events and write task reminders. Existing reminders stay with their original provider.').addDropdown(c=>c.addOptions({feishu:'Feishu',caldav:'CalDAV'}).setValue(this.plugin.settings.calendarProvider??'feishu').onChange(async v=>{this.plugin.settings.calendarProvider=v as 'feishu'|'caldav';this.plugin.clearCalendarCache();await this.plugin.saveSettings();this.plugin.store.changed();this.renderSettings();}));
     if(this.plugin.settings.calendarProvider==='caldav')renderCalDavSettings(el,this.plugin);
     new Setting(el).setName('Read external calendar events').setDesc('Periodically fetch events without editing existing external events.').addToggle(c=>c.setValue(this.plugin.settings.readEnabled).onChange(async v=>{this.plugin.settings.readEnabled=v;await this.plugin.saveSettings();}));
     const refresh=el.createEl('label',{cls:'tc-field'});refresh.createSpan({text:'Auto-refresh interval (minutes)'});
     const interval=refresh.createEl('input',{type:'number',value:String(refreshMinutes(this.plugin.settings.refreshMinutes)),attr:{min:'1',max:'1440',step:'1','aria-label':'Auto-refresh interval (minutes)'}});
     interval.onchange=()=>{const n=Number(interval.value);if(!Number.isInteger(n)||n<1||n>1440){new Notice('Enter a whole number from 1 to 1440 minutes.');interval.value=String(refreshMinutes(this.plugin.settings.refreshMinutes));return;}this.plugin.settings.refreshMinutes=n;void this.plugin.saveSettings();};
     el.createEl('p',{cls:'tc-muted',text:'Applies while Obsidian is running and automatic reading is enabled. Refresh is checked every 30 seconds. On returning to the app, overdue refreshes run once. Manual refresh works at any time.'});
-    if(this.plugin.settings.calendarProvider!=='caldav')new Setting(el).setName('Read calendar IDs').setDesc('Separate calendar IDs with commas. Your account needs read access.').addTextArea(c=>c.setValue(this.plugin.settings.calendarIds).onChange(async v=>{this.plugin.settings.calendarIds=v;await this.plugin.saveSettings();}));
+    if(this.plugin.settings.calendarProvider!=='caldav')new Setting(el).setName('Read calendar identifiers').setDesc('Separate calendar identifiers with commas. Your account needs read access.').addTextArea(c=>c.setValue(this.plugin.settings.calendarIds).onChange(async v=>{this.plugin.settings.calendarIds=v;await this.plugin.saveSettings();}));
     new Setting(el).setName('Write task reminders to calendar').setDesc('Only manages reminders created by this plugin. Reminders remain pending until configured.').addToggle(c=>c.setValue(this.plugin.settings.writeEnabled).onChange(async v=>{this.plugin.settings.writeEnabled=v;await this.plugin.saveSettings();}));
     if(this.plugin.settings.calendarProvider!=='caldav')new Setting(el).setName('Reminder calendar ID').setDesc('Use a dedicated calendar with write access. Existing reminders keep their original calendar.').addText(c=>c.setValue(this.plugin.settings.reminderCalendar).onChange(async v=>{this.plugin.settings.reminderCalendar=v;await this.plugin.saveSettings();}));
     if(this.plugin.settings.calendarProvider!=='caldav'){
-    el.createEl('h3',{text:'Feishu user token'});el.createEl('p',{text:'Use a user_access_token from an administrator-approved app. This version has no embedded app secret or OAuth service; renew expired credentials.'});
+    new Setting(el).setName('Feishu user token').setHeading();el.createEl('p',{text:'Use a user_access_token from an administrator-approved app. This version has no embedded app secret or OAuth service; renew expired credentials.'});
     const input=el.createEl('input',{type:'password',attr:{placeholder:'Paste access token (existing value is never displayed)',autocomplete:'off'}});
     button(el,'Use for this session',()=>{this.plugin.sessionToken=input.value.trim();input.value='';new Notice('Session token set');});
     if(this.app.secretStorage)button(el,'Save to Obsidian secret storage',()=>{this.app.secretStorage.setSecret(this.plugin.settings.secretName,input.value.trim());this.plugin.sessionToken='';input.value='';new Notice('Saved. Do not export credentials to ordinary notes.');});
     button(el,'Disconnect token',()=>{this.plugin.sessionToken='';this.app.secretStorage?.setSecret(this.plugin.settings.secretName,'');new Notice('Credentials cleared. Existing Feishu reminders must be cancelled separately.');});
     }
-    if(this.plugin.settings.calendarProvider!=='caldav')button(el,'Refresh events',()=>this.plugin.syncCalendar(true));button(el,'Sync / retry reminders',async()=>{await this.plugin.syncReminders(true);this.display();});
+    if(this.plugin.settings.calendarProvider!=='caldav')button(el,'Refresh events',()=>this.plugin.syncCalendar(true));button(el,'Sync / retry reminders',async()=>{await this.plugin.syncReminders(true);this.renderSettings();});
     const records=this.plugin.store.all('reminder').filter(r=>r.data.status!=='Synced'&&r.data.status!=='Cancelled');
-    el.createEl('h3',{text:`Pending reminders (${records.length})`});
+    new Setting(el).setName(`Pending reminders (${records.length})`).setHeading();
     el.createEl('p',{text:'Reminders stay on their original service and calendar. Switch back to that connection to update or cancel them; changing providers does not move or duplicate them.'});
-    for(const r of records){const row=el.createDiv({cls:'tc-panel'});row.createDiv({text:`${r.data.title} · ${r.data.status} · ${r.data.provider??(r.data.calendarId?'feishu':'Not assigned')}`});if(r.data.error)row.createDiv({text:r.data.error,cls:'tc-muted'});if(r.data.status==='Source missing')button(row,'Cancel this reminder',async()=>{await this.plugin.reminders.cancelOrphan(r.data.id);await this.plugin.syncReminders();this.display();});}
+    for(const r of records){const row=el.createDiv({cls:'tc-panel'});row.createDiv({text:`${r.data.title} · ${r.data.status} · ${r.data.provider??(r.data.calendarId?'feishu':'Not assigned')}`});if(r.data.error)row.createDiv({text:r.data.error,cls:'tc-muted'});if(r.data.status==='Source missing')button(row,'Cancel this reminder',async()=>{await this.plugin.reminders.cancelOrphan(r.data.id);await this.plugin.syncReminders();this.renderSettings();});}
   }
 }

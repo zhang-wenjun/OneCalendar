@@ -23,14 +23,14 @@ export async function runJournalQA(plugin:OneCalendar){
   const privateTitle=`QA private checklist ${run}`;await vault.process(plugin.file(task.path),raw=>appendDiaryEntry(raw,'Journal',`- [ ] ${privateTitle}`));await s.load(task.path);
   check('Journal checklist is ignored',!s.all().some(r=>r.data.title===privateTitle));
   await s.setStatus(task.data.id,'done');raw=await vault.read(plugin.file(task.path));check('Completion writes to Tasks and preserves Journal',raw.includes(`- [x] QA task ${run}`)&&raw.includes(`- [ ] ${privateTitle}`));
-  const current=s.find(task.data.id)!;check('Cursor on description resolves original task',diaryRecordAtLine(task.path,raw,dateKey(),current.diary!.line+1,s.details)?.data.id===task.data.id);
+  const current=s.find(task.data.id);check('Cursor on description resolves original task',diaryRecordAtLine(task.path,raw,dateKey(),current.diary!.line+1,s.details)?.data.id===task.data.id);
   const modal=new Editor(plugin.app,s,'task',current);modal.open();check('Task editor exposes dates and reminder',!!modal.contentEl.querySelector('input[type=date]')&&!!modal.contentEl.querySelector('input[type=datetime-local]'));check('Editor uses English',modal.titleEl.textContent==='Edit Task');modal.close();
   const converted=await s.convertIdea(idea.data.id);await s.convertIdea(idea.data.id);check('Idea conversion is idempotent',converted.path===idea.path&&s.all('task').filter(t=>t.data.source===idea.data.id).length===1);
   const first=await s.memo(p.data.id,'Earlier update');await s.update(first.data.id,{created:'2026-01-01T00:00:00Z'});await s.memo(p.data.id,'Latest update');check('Memo history survives',s.memos(p.data.id).length===2&&s.memos(p.data.id)[0].body==='Latest update');
   const fresh=new Store(s.files,s.root);fresh.details=new Details(s.files,s.details!.path);fresh.diaryDate=s.diaryDate;await fresh.init();check('Rebuilt index preserves all records and links',fresh.all().length===s.all().length&&fresh.find(task.data.id)?.data.projects?.includes(p.data.id));check('No index errors',s.problems().length===0);
   await plugin.open();const view=plugin.app.workspace.getLeavesOfType(VIEW)[0].view as CalendarView;for(const page of ['overview','board','tasks','projects','ideas','calendar','series']){view.go(page);check(`${page} renders`,!!view.contentEl.querySelector('h1'));}view.go('overview');
  }catch(e){failure=e;results.push(`- [ ] FAILED: ${(e as Error).message}`);}
- await vault.create(`QA-storage-${run}.md`, `# Storage acceptance\n\n${results.join('\n')}\n\nLocal Obsidian only; external calendars, Android and two-device sync were not tested.\n`);new Notice(failure?'Storage test failed; see report':`Storage tests passed: ${results.length}`,8000);if(failure)throw failure;
+ await vault.create(`QA-storage-${run}.md`, `# Storage acceptance\n\n${results.join('\n')}\n\nLocal Obsidian only; external calendars, Android and two-device sync were not tested.\n`);new Notice(failure?'Storage test failed; see report':`Storage tests passed: ${results.length}`,8000);if(failure)throw failure instanceof Error?failure:new Error(typeof failure==='string'?failure:'Storage test failed');
 }
 export async function runRevisionQA(plugin:OneCalendar){
  if(plugin.app.vault.getName()!=='AITestBed')throw Error('AITestBed only');

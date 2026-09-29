@@ -1,4 +1,4 @@
-import { Entity, active, make, stamp } from './model';
+import { active, make, stamp } from './model';
 import { Store } from './store';
 export interface ExternalEvent { id:string; title:string; start:string; end:string; allDay:boolean; calendarId:string;provider?:string;description?:string;location?:string;sourceId?:string;calendarName?:string;color?:string }
 export interface CalendarProvider {
@@ -6,7 +6,10 @@ export interface CalendarProvider {
   put(calendar:string,key:string,title:string,time:string,externalId?:string):Promise<string>;
   remove(calendar:string,externalId:string):Promise<void>;
 }
-export type Transport=(method:string,path:string,body?:unknown)=>Promise<any>;
+export interface FeishuTime {timestamp?:string;date?:string}
+export interface FeishuEvent {event_id:string;status?:string;summary?:string;start_time?:FeishuTime;end_time?:FeishuTime;description?:string;location?:{name?:string}}
+export interface FeishuData {items?:FeishuEvent[];event?:{event_id?:string}}
+export type Transport=(method:string,path:string,body?:unknown)=>Promise<FeishuData>;
 const enc=encodeURIComponent;
 export class Feishu implements CalendarProvider {
   constructor(public request:Transport){}
@@ -18,7 +21,7 @@ export class Feishu implements CalendarProvider {
       const data=await this.request('GET',`/calendar/v4/calendars/${enc(calendar)}/events/instance_view?${params}`);
       for(const e of data.items ?? []){
         if(e.status==='cancelled')continue;
-        const time=(v:any)=>v?.timestamp?new Date(Number(v.timestamp)*1000).toISOString():v?.date?`${v.date}T00:00:00`:'';
+        const time=(v:FeishuTime|undefined)=>v?.timestamp?new Date(Number(v.timestamp)*1000).toISOString():v?.date?`${v.date}T00:00:00`:'';
         const start=time(e.start_time),end=time(e.end_time);
         if(start&&end)result.push({id:e.event_id,title:e.summary||'Untitled event',start,end,allDay:!!e.start_time?.date,calendarId:calendar,description:e.description,location:e.location?.name});
       }
@@ -75,7 +78,7 @@ export class Reminders {
           if(!r.calendarId){const saved=await this.store.update(r.id,{calendarId:calendar,provider:providerName});r=saved.data;}
           const key=`taskcalendar-${r.task}-${Number(r.generation??0)}`;
           const externalId=await provider.put(r.calendarId!,key,value.title,value.time,r.externalId);
-          const current=this.store.find(r.id)!;
+          const current=this.store.find(r.id);
           await this.store.update(r.id,{externalId,synced:r.desired,status:current.data.desired===r.desired?'Synced':'Pending sync',error:undefined,lastSuccess:stamp(),nextRetry:undefined,attempts:0});
         }catch(e){const attempts=Number(r.attempts??0)+1;await this.store.update(r.id,{status:'Sync failed',error:(e as Error).message,attempts,nextRetry:new Date(Date.now()+Math.min(900000,60000*2**Math.min(attempts-1,4))).toISOString()});}
       }

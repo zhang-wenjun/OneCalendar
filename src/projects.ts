@@ -4,14 +4,14 @@ import { hiddenMeta, textHash } from './diary';
 const projectMark=/\s*<!-- task-calendar-project:(.*?) -->\s*$/;
 const memoMark=/\s*<!-- task-calendar-memo:(.*?) -->\s*$/;
 export function projectPath(title:string){
-  const name=title.trim();if(!name||/[<>:"/\\|?*\x00-\x1f]/.test(name)||/[. ]$/.test(name)||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)||name==='.'||name==='..')throw Error('Project name contains invalid folder characters.');
+  const name=title.trim();if(!name||/[<>:"/\\|?*]/.test(name)||[...name].some(c=>c.charCodeAt(0)<32)||/[. ]$/.test(name)||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)||name==='.'||name==='..')throw Error('Project name contains invalid folder characters.');
   return `Projects/${name}/${name}-Memo.md`;
 }
-function meta(line:string,pattern:RegExp):Partial<Entity>{const m=line.match(pattern);if(!m)return {};const data=JSON.parse(m[1]);if(!data||typeof data!=='object'||Array.isArray(data))throw Error('Invalid project metadata. Original text preserved.');return data;}
+function meta(line:string,pattern:RegExp):Partial<Entity>{const m=line.match(pattern);if(!m)return {};const data=JSON.parse(m[1]) as Partial<Entity>;if(!data||typeof data!=='object'||Array.isArray(data))throw Error('Invalid project metadata. Original text preserved.');return data;}
 export function projectRecords(path:string,raw:string,details?:Details):RecordFile[]{
   if(!/^Projects\/[^/]+\/[^/]+-Memo\.md$/.test(path))return [];
   const folder=path.split('/')[1];if(path.split('/')[2]!==`${folder}-Memo.md`)return [];
-  const lines=raw.split(/(?<=\n)/);let offset=0,fence='';const sections:{start:number;body:number;header:string}[]=[];
+  const lines=(raw.match(/[^\n]*\n|[^\n]+$/g) ?? ['']);let offset=0,fence='';const sections:{start:number;body:number;header:string}[]=[];
   let headerStart=-1,headerEnd=0,header='';
   for(const line of lines){const plain=line.replace(/\r?\n$/,'');const f=plain.match(/^\s{0,3}(`{3,}|~{3,})/);if(f){if(!fence)fence=f[1];else if(f[1][0]===fence[0]&&f[1].length>=fence.length)fence='';}
     if(!fence&&!f){if(headerStart<0&&/^# /.test(plain)){headerStart=offset;headerEnd=offset+line.length;header=plain;}

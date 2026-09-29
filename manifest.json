@@ -1,8 +1,8 @@
 {
   "id": "one-calendar",
   "name": "OneCalendar",
-  "version": "0.9.0",
-  "minAppVersion": "1.5.0",
+  "version": "0.9.1",
+  "minAppVersion": "1.11.4",
   "description": "Ideas, lightweight projects, repeating tasks, boards and calendars stored in Markdown.",
   "author": "zhang-wenjun",
   "isDesktopOnly": false

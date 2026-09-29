@@ -1,0 +1,36 @@
+name: Build release
+on:
+  push:
+    tags: ['*.*.*']
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - run: npm ci
+      - name: Verify tag matches manifest
+        run: node -e "if(require('./manifest.json').version!==process.env.RELEASE_TAG)process.exit(1)"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      - run: npm run lint
+      - run: npm test
+      - run: npm run package:release
+      - uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/main.js
+            dist/manifest.json
+            dist/styles.css
+      - name: Create draft with verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/main.js dist/manifest.json dist/styles.css --verify-tag --draft --title "OneCalendar $RELEASE_TAG" --notes-file "docs/RELEASE_NOTES_$RELEASE_TAG.md"

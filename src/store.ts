@@ -140,16 +140,16 @@ export class Store {
         const source=await this.files.read(rec.path);if(rec.diary)patchDiary(source,baseline,changes,body,this.details);else patchProject(source,baseline,changes,body,this.details);
         previous=this.details.rows.get(this.details.tokens.get(key)!);savedToken=await this.details.save({...rec.data,...changes,updated:stamp()});written=this.details.rows.get(savedToken);
       }
-      if(rec.diary){await processSource(raw=>patchDiary(raw,expected??rec,changes,body,this.details));await this.load(rec.path);return this.find(key)!;}
+      if(rec.diary){await processSource(raw=>patchDiary(raw,expected??rec,changes,body,this.details));await this.load(rec.path);return this.find(key);}
       if(rec.bundle){
         if(rec.data.tc==='project'&&changes.title&&changes.title!==rec.data.title){
           if(!this.files.rename)throw Error('The current file adapter does not support renaming.');
           const next=projectPath(changes.title),folder=next.slice(0,next.lastIndexOf('/')),oldFolder=rec.path.slice(0,rec.path.lastIndexOf('/'));
           if(this.files.exists(folder)||this.files.exists(next))throw Error('Destination project folder already exists. Nothing was overwritten.');
           await processSource(raw=>patchProject(raw,expected??rec,changes,body,this.details));
-          await this.files.rename(oldFolder,folder);await this.files.rename(`${folder}/${rec.path.split('/').pop()}`,next);await this.init();return this.find(key)!;
+          await this.files.rename(oldFolder,folder);await this.files.rename(`${folder}/${rec.path.split('/').pop()}`,next);await this.init();return this.find(key);
         }
-        await processSource(raw=>patchProject(raw,expected??rec,changes,body,this.details));await this.load(rec.path);return this.find(key)!;
+        await processSource(raw=>patchProject(raw,expected??rec,changes,body,this.details));await this.load(rec.path);return this.find(key);
       }
       await this.files.process(rec.path,raw=>{
         const current=readMarkdown(rec.path,raw); if(!current) throw new Error('Record format changed');
@@ -161,7 +161,7 @@ export class Store {
         return patchMarkdown(raw,{...changes, updated:stamp(), revision:(Number(current.data.revision)||0)+1},body);
       });
       await this.load(rec.path);
-      return this.find(key)!;
+      return this.find(key);
     });
   }
   async migrateReadable(){
@@ -186,7 +186,7 @@ export class Store {
         if(diarySections(raw).some(s=>s.name==='Tasks'||s.name==='Ideas'))continue;
         const records=diaryTasks(path,raw,day,this.details,true).filter(r=>/🆔〔|<!--\s*task-calendar:/.test(r.raw));if(!records.length)continue;
         const backup=`${this.root}/SectionBackups/${path}.bak`;await this.files.mkdir(backup.slice(0,backup.lastIndexOf('/')));if(!this.files.exists(backup))await this.files.create(backup,raw);
-        const lines=raw.split(/(?<=\n)/);for(const r of [...records].reverse())lines.splice(r.diary!.line,r.diary!.endLine!-r.diary!.line);
+        const lines=(raw.match(/[^\n]*\n|[^\n]+$/g) ?? ['']);for(const r of [...records].reverse())lines.splice(r.diary!.line,r.diary!.endLine!-r.diary!.line);
         let next=lines.join('').replace(/^## (?:今日记录|今日待办|随记)\s*$/gm,'## Journal');
         if(!diarySections(next).some(s=>s.name==='Journal'))next=appendDiaryEntry(next,'Journal','');
         for(const r of records){await this.details?.save(r.data);next=appendDiaryEntry(next,r.data.tc==='task'?'Tasks':'Ideas',diaryEntry(r.data,r.body,day,'- ',this.details));}

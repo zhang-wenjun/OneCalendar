@@ -20,7 +20,7 @@ export function appendDiaryEntry(raw:string,section:DiarySection,entry:string){
   if(matches.length>1)throw Error(`Multiple ${section} sections; merge them before adding a record.`);
   const eol=raw.includes('\r\n')?'\r\n':'\n';const content=entry.replace(/\r?\n/g,eol);
   if(!matches.length)return raw+(raw.endsWith('\n')?'':'\n')+eol+`## ${section}`+eol+eol+content+eol;
-  const lines=raw.split(/(?<=\n)/),at=matches[0].end;
+  const lines=(raw.match(/[^\n]*\n|[^\n]+$/g) ?? ['']),at=matches[0].end;
   const before=lines.slice(0,at).join(''),after=lines.slice(at).join('');
   return before+(before.endsWith('\n')?'':eol)+eol+content+eol+(after?eol+after:'');
 }

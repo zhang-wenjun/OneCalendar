@@ -11,5 +11,6 @@ async function visit(name){
 }
 for(const name of Object.keys(root.dependencies))await visit(name);
 text+='\nICAL.js is distributed without source changes under MPL-2.0. Its complete source form and license are available in the versioned source archive linked above.\n';
+text=text.replaceAll('\r\n','\n');
 await writeFile('THIRD-PARTY-NOTICES.txt',text);
 export const notices=text;
