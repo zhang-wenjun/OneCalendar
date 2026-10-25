@@ -18,3 +18,5 @@ export const editorLivePreviewField=StateField.define<boolean>({create:()=>true,
 
 export function setIcon(){}
 
+
+export class Vault {}

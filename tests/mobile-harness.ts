@@ -1,6 +1,6 @@
 import {DailyNotes} from '../src/daily-notes';
 import {DiaryCalendar} from '../src/diary-calendar';
-import {TFile} from 'obsidian';
+import {TFile,moment} from 'obsidian';
 import {MemoEditor} from '../src/forms';
 import {CalendarView} from '../src/view';
 import {Editor} from '../src/forms';
@@ -24,6 +24,11 @@ async function openMini(){
  await view.onClose();
  const files=new Map<string,any>();let active:any;
  const app:any={vault:{on:()=>({}),getAbstractFileByPath:(p:string)=>files.get(p),createFolder:async(p:string)=>files.set(p,{}),create:async(p:string)=>{const f=Object.assign(new TFile(),{path:p});files.set(p,f);return f;}},workspace:{on:()=>({}),getActiveFile:()=>active,getLeaf:()=>({openFile:async(f:any)=>{active=f;}})}};
+ const template=Object.assign(new TFile(),{path:'Templates/Daily.md'});
+ app.internalPlugins={plugins:{'daily-notes':{enabled:true}},getPluginById:()=>({instance:{options:{folder:'diary',format:'YYYY-MM-DD',template:'Templates/Daily'}}})};
+ app.plugins={getPlugin:()=>undefined};app.foldManager={load:()=>null,save:()=>{}};
+ app.metadataCache={getFirstLinkpathDest:()=>template};app.vault.read=app.vault.cachedRead=async()=> '## Tasks\n\n## Journal\n\n## Ideas\n';
+ Object.assign(window,{app,moment});
  const diary=new DailyNotes(app);const mini=new DiaryCalendar({} as any,{diary,openDiary:(day:string)=>diary.open(day)} as any);mini.app=app;mini.contentEl=document.getElementById('app')!;mini.contentEl.className='';void mini.onOpen();
  Object.assign(window,{miniQA:{files,diary,mini}});
 }

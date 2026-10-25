@@ -11,6 +11,7 @@ test('A failed startup migration prevents background scheduling and reminder wri
  const oldWindow=(globalThis as any).window;(globalThis as any).window={setInterval:(fn:()=>void)=>{timers.push(fn);return timers.length;},setTimeout:()=>1,clearTimeout:()=>{}};
  const vault:any={configDir:'.obsidian',adapter:{exists:async()=>false},getName:()=> 'Test',getAbstractFileByPath:(p:string)=>loaded&&map.has(p)?new (TFile as any)(p):null,getMarkdownFiles:()=>loaded?[...map.keys()].map(p=>new (TFile as any)(p)):[],read:async(f:TFile)=>map.get(f.path),create:async()=>{writes++;},process:async()=>{writes++;},createFolder:async()=>{},on:()=>({})};
  const plugin=new OneCalendar({} as any,{} as any);Object.assign(plugin,{app:{vault,workspace:{onLayoutReady:(fn:()=>void)=>{onReady=fn;}},fileManager:{renameFile:async()=>{writes++;}}},loadData:async()=>({}),saveData:async()=>{},registerView:()=>{},addRibbonIcon:()=>{},addCommand:()=>{},addSettingTab:()=>{},registerEvent:()=>{},registerInterval:()=>{}});
+ Object.assign((globalThis as any).window,{app:{internalPlugins:{getPluginById:()=>({instance:{options:{folder:'diary',format:'YYYY-MM-DD'}}})},plugins:{getPlugin:()=>undefined}}});
  plugin.run=async fn=>{pending=(async()=>{try{return await fn();}catch(e){errors.push((e as Error).message);}})();await pending;};
  try{
   await plugin.onload();assert.equal(writes,0);for(const fn of timers){fn();await pending;}assert.equal(writes,0);

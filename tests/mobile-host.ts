@@ -24,3 +24,5 @@ export async function requestUrl(){throw Error('Real network is disabled in brow
 export const MarkdownRenderer={render:async(_app:any,text:string,el:HTMLElement)=>{el.textContent=text;}};
 
 export function setIcon(parent:HTMLElement,name:string){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('data-icon',name);svg.setAttribute('aria-hidden','true');parent.replaceChildren(svg);}
+
+export class Vault {}

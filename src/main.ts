@@ -7,7 +7,7 @@ import { CalendarView, VIEW } from './view';
 import { ExternalEvent, FeishuData, Feishu, Reminders } from './calendar';
 import { dateKey, addDays } from './model';
 import { runJournalQA, runRevisionQA } from './qa';
-import { DailyNotes } from './daily-notes';
+import { DailyNotes, dailyTemplatePath } from './daily-notes';
 import { Details } from './details';
 import {renderCalDavSettings} from './caldav-settings';
 import {CalDav,basicAuth,calendarUrl,DavCalendar} from './caldav';
@@ -34,7 +34,7 @@ export default class OneCalendar extends Plugin {
       mkdir:async p=>{let current='';for(const part of normalizePath(p).split('/')){current=current?`${current}/${part}`:part;if(!vault.getAbstractFileByPath(current))await vault.createFolder(current);}}};
     this.store=new Store(files,this.settings.root);this.reminders=new Reminders(this.store);
     this.store.details=new Details(files,`${this.settings.root}/Details.md`);
-    this.diary=new DailyNotes(this.app);await this.diary.configure(this.settings.diaryFolder,this.settings.diaryFormat);this.store.diaryDate=p=>this.diary.date(p);
+    this.diary=new DailyNotes(this.app);await this.diary.configure();this.store.diaryDate=p=>this.diary.date(p);
     this.store.journal={path:day=>this.diary.path(day),ensure:day=>this.diary.ensure(day)};
     this.registerView(DIARY_VIEW,leaf=>new DiaryCalendar(leaf,this));
     this.addCommand({id:'open-diary-calendar',name:'Open diary calendar',callback:()=>void this.openDiaryCalendar()});
@@ -58,13 +58,13 @@ export default class OneCalendar extends Plugin {
     this.addCommand({id:'sync-calendar',name:'Sync calendars and reminders',callback:()=>void this.run(async()=>{if(this.settings.readEnabled)await this.syncCalendar();await this.syncReminders(true);})});
     this.addSettingTab(new CalendarSettings(this.app,this));
     if(this.app.vault.getName()==='AITestBed')this.addCommand({id:'local-acceptance',name:'Test journal storage (AITestBed only)',callback:()=>void this.run(()=>runJournalQA(this))});
-    this.addCommand({id:'migrate-journal',name:'Rescan and migrate legacy records',callback:()=>void this.run(async()=>{await this.prepareDetails();await this.store.migrateDiarySections();await this.store.init();const count=await this.store.migrateLegacy();await this.store.migrateReadable();new Notice(`Migrated ${count} legacy records. Original files are backed up.`);})});
+    this.addCommand({id:'migrate-journal',name:'Rescan and migrate legacy records',callback:()=>void this.run(async()=>{await this.prepareDetails();await this.diary.ensureTemplate();await this.store.migrateDiarySections();await this.store.init();const count=await this.store.migrateLegacy();await this.store.migrateReadable();new Notice(`Migrated ${count} legacy records. Original files are backed up.`);})});
     if(this.app.vault.getName()==='AITestBed')this.addCommand({id:'revision-acceptance',name:'Test week view and diary (AITestBed only)',callback:()=>void this.run(()=>runRevisionQA(this))});
     this.registerEvent(vault.on('create',f=>{if(f instanceof TFile)void this.changed(f.path);}));
     this.registerEvent(vault.on('modify',f=>{if(f instanceof TFile)void this.changed(f.path);}));
     this.registerEvent(vault.on('delete',f=>{if(f instanceof TFile)this.store.remove(f.path);else if(f instanceof TFolder)for(const path of [...this.store.records.keys(),...this.store.diaries.keys(),...this.store.projectFiles.keys()])if(path.startsWith(f.path+'/'))this.store.remove(path);this.schedule();}));
     this.registerEvent(vault.on('rename',(f,old)=>{this.store.remove(old);if(f instanceof TFile)void this.changed(f.path);else void this.run(()=>this.store.init());}));
-    this.app.workspace.onLayoutReady(()=>void this.run(async()=>{await this.prepareDetails();if(this.settings.diarySectionsVersion!==1){await this.store.migrateDiarySections();this.settings.diarySectionsVersion=1;await this.saveSettings();}await this.store.init();const migrated=await this.store.migrateLegacy();if(migrated)new Notice(`Migrated ${migrated} records into daily notes and Projects. Originals are in LegacyBackup.`);await this.store.migrateReadable();this.ready=true;this.flushIdeaCapture();await this.store.tick();await this.syncReminders();if(this.settings.readEnabled&&this.hasCredentials())await this.syncCalendar();}));
+    this.app.workspace.onLayoutReady(()=>void this.run(async()=>{await this.prepareDetails();await this.diary.ensureTemplate();if(this.settings.diarySectionsVersion!==1){await this.store.migrateDiarySections();this.settings.diarySectionsVersion=1;await this.saveSettings();}await this.store.init();const migrated=await this.store.migrateLegacy();if(migrated)new Notice(`Migrated ${migrated} records into daily notes and Projects. Originals are in LegacyBackup.`);await this.store.migrateReadable();this.ready=true;this.flushIdeaCapture();await this.store.tick();await this.syncReminders();if(this.settings.readEnabled&&this.hasCredentials())await this.syncCalendar();}));
     this.registerInterval(window.setInterval(()=>void this.run(async()=>{if(!this.ready)return;await this.store.tick();await this.syncReminders();}),60000));
     this.registerInterval(window.setInterval(()=>{if(this.ready&&this.settings.readEnabled&&this.hasCredentials()&&this.refreshDue())void this.run(()=>this.syncCalendar());},30000));
     if(typeof document!=='undefined')this.registerDomEvent(document,'visibilitychange',()=>{if(document.visibilityState==='visible')void this.run(()=>this.resume());});
@@ -95,7 +95,7 @@ export default class OneCalendar extends Plugin {
     if(!leaf){const right=this.app.workspace.getRightLeaf(false);if(!right)return;leaf=right;await leaf.setViewState({type:DIARY_VIEW,active:reveal});}
     if(reveal)await this.app.workspace.revealLeaf(leaf);
   }
-  async openDiary(day:string){await this.diary.configure(this.settings.diaryFolder,this.settings.diaryFormat);await this.store.init();return this.diary.open(day);}
+  async openDiary(day:string){await this.diary.configure();await this.store.init();return this.diary.open(day);}
   schedule(){if(this.timer)window.clearTimeout(this.timer);if(this.ready&&!this.disposed&&!this.store.migrating)this.timer=window.setTimeout(()=>void this.run(()=>this.syncReminders()),1500);}
   async run(fn:()=>Promise<unknown>){try{await fn();}catch(e){if((e as Error).message==='Diary creation cancelled.')return;new Notice(`OneCalendar: ${(e as Error).message}`,8000);}}
   async open(){let leaf=this.app.workspace.getLeavesOfType(VIEW)[0];if(!leaf){leaf=this.app.workspace.getLeaf('tab');await leaf.setViewState({type:VIEW,active:true});}await this.app.workspace.revealLeaf(leaf);}
@@ -206,10 +206,10 @@ class CalendarSettings extends PluginSettingTab {
     const el=this.containerEl;el.empty();el.addClass('tc-settings');new Setting(el).setName(`OneCalendar ${this.plugin.manifest.version}`).setHeading();
     el.createEl('p',{text:'Tasks and ideas live in daily notes. Project memos live in Projects/<name>/<name>-Memo.md. Sync diary, Projects and TaskCalendar together. Calendar write access depends on the service. Android notification delivery has not been device-tested.'});
     new Setting(el).setName('Diary').setHeading();
-    el.createEl('p',{text:'Uses the Daily notes folder, date format and template, or diary/YYYY-MM-DD.md by default. Only checkboxes under Tasks and bullets under Ideas are indexed. Journal stays private to your writing.'});
-    new Setting(el).setName('Override diary folder').setDesc('Leave blank to use the daily notes folder.').addText(c=>c.setValue(this.plugin.settings.diaryFolder??'').onChange(v=>{this.plugin.settings.diaryFolder=v;}));
-    new Setting(el).setName('Override diary date format').setDesc('Leave blank to use the daily notes date format.').addText(c=>c.setValue(this.plugin.settings.diaryFormat??'').onChange(v=>{this.plugin.settings.diaryFormat=v;}));
-    button(el,'Apply diary settings and rescan',async()=>{await this.plugin.diary.configure(this.plugin.settings.diaryFolder,this.plugin.settings.diaryFormat);await this.plugin.saveSettings();await this.plugin.store.init();new Notice('Diary index updated');});
+    el.createEl('p',{text:'Daily notes controls the diary folder, date format and template. Enable it in core plugins, then select the template below. Keep your existing diary folder. If another daily note plugin overrides these settings, its daily configuration takes precedence.'});
+    button(el,'Open daily note template',async()=>{const file=await this.plugin.diary.ensureTemplate();await this.app.workspace.getLeaf(false).openFile(file);});
+    new Setting(el).setName('Template file').setDesc(dailyTemplatePath+' · Existing template content is preserved.');
+    button(el,'Reload daily notes settings',async()=>{await this.plugin.diary.configure();await this.plugin.store.init();new Notice('Diary index updated');});
     new Setting(el).setName('Third-party calendars').setHeading();
     new Setting(el).setName('Calendar provider').setDesc('Read external events and write task reminders. Existing reminders stay with their original provider.').addDropdown(c=>c.addOptions({feishu:'Feishu',caldav:'CalDAV'}).setValue(this.plugin.settings.calendarProvider??'feishu').onChange(async v=>{this.plugin.settings.calendarProvider=v as 'feishu'|'caldav';this.plugin.clearCalendarCache();await this.plugin.saveSettings();this.plugin.store.changed();this.renderSettings();}));
     if(this.plugin.settings.calendarProvider==='caldav')renderCalDavSettings(el,this.plugin);

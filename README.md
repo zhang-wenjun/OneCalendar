@@ -1,4 +1,4 @@
-# OneCalendar 0.9.1
+# OneCalendar 0.9.2
 
 A free, MIT-licensed Obsidian plugin for tasks, quick ideas, lightweight projects and calendars. Your notes remain Markdown files. The plugin supports desktop and Android, with an English interface.
 
@@ -78,7 +78,11 @@ Commands: **OneCalendar: Edit or create task in diary** and **OneCalendar: Edit 
 
 ## Daily note template
 
-The supplied template is `Templates/Daily.md`. In Obsidian Settings → Daily notes, set Template file location to `Templates/Daily`. AITestBed is already configured. New notes default to:
+OneCalendar generates `Templates/OneCalendar Daily.md` when the workspace is ready, without overwriting an existing file. Enable **Daily notes** in Core plugins. In Settings → Daily notes, set the folder to `diary` (or your existing diary folder), choose a date format such as `YYYY-MM-DD`, and select `Templates/OneCalendar Daily` as the template. You can open and edit it with **Open daily note template** in OneCalendar settings.
+
+Daily notes settings are now the only source for the diary location, format and template. Old OneCalendar folder/format overrides are no longer used; copy those values to Daily notes before upgrading if you customized them. The shared `obsidian-daily-notes-interface` handles creation and template expansion for the selected date. If Periodic Notes manages daily notes, that interface uses its daily configuration. Existing diaries are opened in the current tab; a missing diary for a non-today date still requires confirmation.
+
+The generated template contains:
 
 ```markdown
 ## Tasks
@@ -101,7 +105,7 @@ The headings must be level-two headings with these exact names. Subheadings are 
 
 Moving or deleting an entry in Markdown updates the index. Moving it outside its designated section removes it from the dashboard without deleting its text. Preserve the short ID when moving an existing entry to another appropriate section or note; remove it when copying an entry to create a new record.
 
-Custom Daily notes templates are supported. Missing required sections are appended when creating a new note. Existing notes are not automatically rewritten during normal captures; a missing destination section is added when needed.
+Custom Daily notes templates are preserved exactly during creation. OneCalendar no longer appends sections at creation time. During task/idea capture, a missing destination section is added when needed. If Daily notes is disabled or its selected template is missing, new diary creation stops with a setup message instead of creating a blank file. After changing the daily note folder or format, use Reload daily notes settings in OneCalendar to rebuild its index.
 
 ## Readable metadata and sync
 
