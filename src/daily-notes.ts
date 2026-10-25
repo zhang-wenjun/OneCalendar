@@ -5,7 +5,6 @@ import {diaryTemplate} from './diary-sections';
 import {dateKey} from './model';
 import {confirmDiary} from './diary-confirm';
 const moment=obsidianMoment as unknown as typeof momentFunction;
-export const dailyTemplatePath='Templates/OneCalendar Daily.md';
 export interface DiaryConfig {folder:string;format:string;template:string}
 export class DailyNotes {
   config:DiaryConfig={folder:'',format:'YYYY-MM-DD',template:''};
@@ -18,15 +17,17 @@ export class DailyNotes {
     this.config={folder:settings?.folder??'',format:settings?.format||'YYYY-MM-DD',template:settings?.template??''};
   }
   configure(){this.refresh();return Promise.resolve();}
+  get templatePath(){this.refresh();return normalizePath([this.config.folder,'one-cal-template.md'].filter(Boolean).join('/'));}
   ensureTemplate(){
     if(this.templatePending)return this.templatePending;
     this.templatePending=this.createTemplate().finally(()=>{this.templatePending=undefined;});return this.templatePending;
   }
   private async createTemplate(){
-    const vault=this.app.vault,existing=vault.getAbstractFileByPath(dailyTemplatePath);
+    const vault=this.app.vault,dailyTemplatePath=this.templatePath,existing=vault.getAbstractFileByPath(dailyTemplatePath);
     if(existing instanceof TFile)return existing;
     if(existing)throw Error('A folder occupies the daily template path.');
-    if(!vault.getAbstractFileByPath('Templates'))await vault.createFolder('Templates');
+    let folder='';
+    for(const part of dailyTemplatePath.split('/').slice(0,-1)){folder=folder?`${folder}/${part}`:part;if(!vault.getAbstractFileByPath(folder))await vault.createFolder(folder);}
     const raced=vault.getAbstractFileByPath(dailyTemplatePath);if(raced instanceof TFile)return raced;
     return vault.create(dailyTemplatePath,diaryTemplate);
   }
@@ -47,7 +48,7 @@ export class DailyNotes {
     const path=this.path(day),configuration=JSON.stringify(this.config),vault=this.app.vault;let file=vault.getAbstractFileByPath(path);
     if(!file){
       if(!appHasDailyNotesPluginLoaded())throw Error('Enable Daily notes in Settings → Core plugins before creating a diary.');
-      if(!this.config.template)throw Error('Select Templates/OneCalendar Daily in the Daily notes template setting.');
+      if(!this.config.template)throw Error(`Select ${this.templatePath} in the daily notes template setting.`);
       const template=this.app.metadataCache.getFirstLinkpathDest(this.config.template,'');
       if(!(template instanceof TFile))throw Error('Daily note template missing. Check Daily notes settings.');
       // Validate before calling the interface, which otherwise falls back to an empty template.

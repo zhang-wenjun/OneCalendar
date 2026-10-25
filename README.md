@@ -78,7 +78,7 @@ Commands: **OneCalendar: Edit or create task in diary** and **OneCalendar: Edit 
 
 ## Daily note template
 
-OneCalendar generates `Templates/OneCalendar Daily.md` when the workspace is ready, without overwriting an existing file. Enable **Daily notes** in Core plugins. In Settings → Daily notes, set the folder to `diary` (or your existing diary folder), choose a date format such as `YYYY-MM-DD`, and select `Templates/OneCalendar Daily` as the template. You can open and edit it with **Open daily note template** in OneCalendar settings.
+OneCalendar generates `one-cal-template.md` inside the configured Daily notes folder when the workspace is ready, without overwriting an existing file. Enable **Daily notes** in Core plugins. In Settings → Daily notes, set the folder to `diary` (or your existing diary folder), choose a date format such as `YYYY-MM-DD`, and select `diary/one-cal-template` (adjust the folder to match your settings) as the template. You can open and edit it with **Open daily note template** in OneCalendar settings.
 
 Daily notes settings are now the only source for the diary location, format and template. Old OneCalendar folder/format overrides are no longer used; copy those values to Daily notes before upgrading if you customized them. The shared `obsidian-daily-notes-interface` handles creation and template expansion for the selected date. If Periodic Notes manages daily notes, that interface uses its daily configuration. Existing diaries are opened in the current tab; a missing diary for a non-today date still requires confirmation.
 
@@ -87,14 +87,9 @@ The generated template contains:
 ```markdown
 ## Tasks
 
-- [ ] 
-
 ## Journal
 
-
 ## Ideas
-
-- 
 ```
 
 The headings must be level-two headings with these exact names. Subheadings are allowed; a new level-one or level-two heading ends the section. Code blocks, comments and YAML are ignored. Duplicate target sections are rejected when adding entries to avoid ambiguous writes.

@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import moment from 'moment';
-import {DailyNotes,dailyTemplatePath} from '../src/daily-notes';
+import {DailyNotes} from '../src/daily-notes';
 import {diaryTemplate} from '../src/diary-sections';
 import {TFile} from 'obsidian';
 import {dateKey} from '../src/model';
@@ -30,14 +30,14 @@ test('Non-today creation asks once, cancellation writes nothing, explicit open r
 });
 test('Generated template is idempotent, editable and contains only the three level-two sections',async()=>{
  const h=host();const [a,b]=await Promise.all([h.diary.ensureTemplate(),h.diary.ensureTemplate()]);assert.equal(a,b);assert.equal(h.creates(),1);
- assert.equal(h.contents.get(dailyTemplatePath),diaryTemplate);assert.ok(!/^# /m.test(diaryTemplate));
- h.contents.set(dailyTemplatePath,'My customized template');await h.diary.ensureTemplate();assert.equal(h.contents.get(dailyTemplatePath),'My customized template');
+ assert.equal(h.contents.get(h.diary.templatePath),diaryTemplate);assert.equal(h.diary.templatePath,'diary/one-cal-template.md');assert.equal(diaryTemplate,'## Tasks\n\n## Journal\n\n## Ideas\n');
+ h.contents.set(h.diary.templatePath,'My customized template');await h.diary.ensureTemplate();assert.equal(h.contents.get(h.diary.templatePath),'My customized template');
 });
 test('Disabled Daily notes and missing templates never create blank diaries; existing notes still open',async()=>{
  const h=host();h.core.enabled=false;await assert.rejects(h.diary.ensure(dateKey()),/Enable Daily notes/);assert.equal(h.creates(),0);
  const path=h.diary.path(dateKey());await h.app.vault.create(path,'Existing');await h.diary.open(dateKey());assert.equal(h.opened(),path);
  h.core.enabled=true;h.core.instance.options.template='Missing';await assert.rejects(h.diary.ensure('2030-01-02'),/template missing/);
- h.core.instance.options.template='';await assert.rejects(h.diary.ensure('2030-01-02'),/Select Templates/);assert.equal(h.creates(),1);
+ h.core.instance.options.template='';await assert.rejects(h.diary.ensure('2030-01-02'),/Select .*one-cal-template/);assert.equal(h.creates(),1);
 });
 test('A settings change during confirmation aborts creation rather than using a stale path',async()=>{
  const h=host();const diary=new DailyNotes(h.app,async()=>{h.core.instance.options.folder='Changed';return true;});

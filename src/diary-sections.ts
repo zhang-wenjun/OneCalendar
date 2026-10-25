@@ -1,5 +1,5 @@
 export type DiarySection='Tasks'|'Journal'|'Ideas';
-export const diaryTemplate='## Tasks\n\n- [ ] \n\n## Journal\n\n\n## Ideas\n\n- \n';
+export const diaryTemplate='## Tasks\n\n## Journal\n\n## Ideas\n';
 // Share one heading scanner between reads and writes. Examples and comments never create sections.
 export function diarySections(raw:string){
   const lines=raw.split(/\r?\n/), sections:{name:string;start:number;end:number}[]=[];

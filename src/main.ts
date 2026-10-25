@@ -7,7 +7,7 @@ import { CalendarView, VIEW } from './view';
 import { ExternalEvent, FeishuData, Feishu, Reminders } from './calendar';
 import { dateKey, addDays } from './model';
 import { runJournalQA, runRevisionQA } from './qa';
-import { DailyNotes, dailyTemplatePath } from './daily-notes';
+import { DailyNotes } from './daily-notes';
 import { Details } from './details';
 import {renderCalDavSettings} from './caldav-settings';
 import {CalDav,basicAuth,calendarUrl,DavCalendar} from './caldav';
@@ -208,7 +208,7 @@ class CalendarSettings extends PluginSettingTab {
     new Setting(el).setName('Diary').setHeading();
     el.createEl('p',{text:'Daily notes controls the diary folder, date format and template. Enable it in core plugins, then select the template below. Keep your existing diary folder. If another daily note plugin overrides these settings, its daily configuration takes precedence.'});
     button(el,'Open daily note template',async()=>{const file=await this.plugin.diary.ensureTemplate();await this.app.workspace.getLeaf(false).openFile(file);});
-    new Setting(el).setName('Template file').setDesc(dailyTemplatePath+' · Existing template content is preserved.');
+    new Setting(el).setName('Template file').setDesc(this.plugin.diary.templatePath+' · Existing template content is preserved.');
     button(el,'Reload daily notes settings',async()=>{await this.plugin.diary.configure();await this.plugin.store.init();new Notice('Diary index updated');});
     new Setting(el).setName('Third-party calendars').setHeading();
     new Setting(el).setName('Calendar provider').setDesc('Read external events and write task reminders. Existing reminders stay with their original provider.').addDropdown(c=>c.addOptions({feishu:'Feishu',caldav:'CalDAV'}).setValue(this.plugin.settings.calendarProvider??'feishu').onChange(async v=>{this.plugin.settings.calendarProvider=v as 'feishu'|'caldav';this.plugin.clearCalendarCache();await this.plugin.saveSettings();this.plugin.store.changed();this.renderSettings();}));
