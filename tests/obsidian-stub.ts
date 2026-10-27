@@ -20,3 +20,5 @@ export function setIcon(){}
 
 
 export class Vault {}
+
+export class Menu {}

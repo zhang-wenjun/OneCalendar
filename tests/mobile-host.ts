@@ -26,3 +26,9 @@ export const MarkdownRenderer={render:async(_app:any,text:string,el:HTMLElement)
 export function setIcon(parent:HTMLElement,name:string){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('data-icon',name);svg.setAttribute('aria-hidden','true');parent.replaceChildren(svg);}
 
 export class Vault {}
+
+export class Menu {
+ private items:{title:string;action:()=>unknown}[]=[];
+ addItem(build:(item:any)=>unknown){const item:any={title:'',action:()=>{},setTitle(t:string){this.title=t;return this;},setIcon(){return this;},onClick(fn:()=>unknown){this.action=fn;return this;}};build(item);this.items.push(item);return this;}
+ showAtMouseEvent(){const menu=document.createElement('div');menu.className='test-native-menu';menu.setAttribute('role','menu');for(const item of this.items){const button=document.createElement('button');button.textContent=item.title;button.setAttribute('role','menuitem');button.onclick=()=>{menu.remove();item.action();};menu.append(button);}document.body.append(menu);}
+}

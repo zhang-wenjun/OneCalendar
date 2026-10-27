@@ -78,3 +78,38 @@
 .tc-time-selection{height:30px}
 .nav-files-container .nav-folder-title[data-path="TaskCalendar"],
 .nav-files-container .nav-folder-title[data-path="TaskCalendar"] + .nav-folder-children{display:none}
+
+/* Task presentation: scoped selectors override host button chrome without !important. */
+.tc-root .tc-task{padding:13px;border-radius:9px;margin:0 0 10px;min-width:0}
+.tc-root .tc-task .tc-task-heading{gap:10px;align-items:flex-start}
+.tc-root .tc-task .tc-title-button{flex:1;min-width:0;padding:0;border:0;box-shadow:none;background:transparent;color:var(--text-normal);font-size:14px;font-weight:600;line-height:1.65;height:auto;min-height:24px;white-space:normal;text-align:left;overflow-wrap:anywhere}
+.tc-root .tc-task .tc-title-button:hover{color:var(--tc-accent);background:transparent;box-shadow:none}
+.tc-root .tc-task .tc-title-button:focus-visible{outline:2px solid var(--tc-accent);outline-offset:3px;border-radius:3px}
+.tc-root .tc-task.tc-complete .tc-title-button{color:var(--text-muted);font-weight:400}
+.tc-root .tc-task .tc-task-heading input[type=checkbox]{margin:4px 0 0;min-width:17px;min-height:17px;flex-shrink:0}
+.tc-root .tc-task .tc-meta{gap:6px 9px;margin:8px 0 9px 27px;font-size:11px;color:var(--text-muted)}
+.tc-root .tc-task .tc-chip{font-size:11px;padding:1px 5px;line-height:1.6;border:0;box-shadow:none;min-height:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.tc-root .tc-task-date{display:inline-flex;align-items:center;gap:4px;font-size:11px}
+.tc-root .tc-task-date>span:first-child{display:inline-flex}.tc-root .tc-task-date svg{width:13px;height:13px}
+.tc-root .tc-task .tc-card-actions{gap:4px;flex-wrap:nowrap;margin-top:6px}
+.tc-root .tc-task select.tc-task-status{margin-right:auto;max-width:140px;width:auto;box-shadow:none;font-size:11px;min-height:28px;height:28px;padding:2px 7px;border-radius:6px}
+.tc-root .tc-task .tc-card-actions .tc-icon{width:32px;min-width:32px;min-height:30px;height:30px;padding:6px;box-shadow:none;border:0;background:transparent;color:var(--text-muted)}
+.tc-root .tc-task .tc-card-actions .tc-icon:hover{background:var(--background-secondary);color:var(--text-normal)}
+.tc-root .tc-board{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;overflow:visible}
+.tc-root .tc-column{padding:10px;min-width:0;border-radius:9px}
+.tc-root .tc-column>h2{font-size:13px;margin:1px 0 12px;font-weight:600}
+.tc-root .tc-task-toolbar{margin:10px 0 16px;gap:8px}
+.tc-root .tc-task-toolbar input[type=search]{flex:1;min-width:120px;width:auto}
+.tc-root .tc-task-toolbar select{max-width:100%;font-size:12px;box-shadow:none}
+.tc-root .tc-task-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0 8px}
+.tc-root .tc-task-tabs button{border:0;box-shadow:none;background:transparent;font-size:12px;padding:6px 9px;white-space:nowrap;height:auto;min-height:34px;border-radius:7px}
+.tc-root .tc-task-tabs button.is-active{color:var(--tc-accent);background:color-mix(in srgb,var(--tc-accent) 12%,var(--background-primary))}
+.tc-root .tc-task-tabs button:focus-visible{outline:2px solid var(--tc-accent);outline-offset:1px}
+.tc-root.tc-mobile .tc-task-mobile-list{display:block}
+.tc-root.tc-mobile .tc-task .tc-task-heading input[type=checkbox]{min-width:22px;min-height:22px;margin:5px 0 0}
+.tc-root.tc-mobile .tc-task .tc-title-button{min-height:36px}
+.tc-root.tc-mobile .tc-task .tc-meta{margin-left:32px}
+.tc-root.tc-mobile .tc-task .tc-card-actions .tc-icon{min-width:44px;width:44px;min-height:44px;height:44px}
+.tc-root.tc-mobile .tc-task select.tc-task-status{min-height:44px;height:44px;font-size:12px}
+.tc-root.tc-mobile .tc-task-tabs button{min-height:44px}
+@container(max-width:650px){.tc-root:not(.tc-mobile) .tc-board{grid-template-columns:1fr}.tc-root .tc-task-toolbar{flex-wrap:wrap}.tc-root .tc-task-toolbar input[type=search]{flex-basis:100%}}

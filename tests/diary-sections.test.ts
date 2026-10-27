@@ -33,3 +33,19 @@ test('Legacy marked entries migrate once with IDs and backups; ordinary journal 
  map.set(path,map.get(path)!.replace('## Tasks','## Other'));assert.equal(await s.migrateDiarySections(),0);await s.init();assert.equal(s.find(task.id),undefined);
 });
 test('Default template has all three sections with no phantom records',()=>{assert.equal(diaryTasks(path,diaryTemplate,day).length,0);assert.ok(!/^# /m.test(diaryTemplate));for(const section of ['Tasks','Journal','Ideas'])assert.ok(diaryTemplate.includes('## '+section));});
+
+
+test('Repeated captures keep compact lists and normalize only the insertion boundary',()=>{
+ for(const eol of ['\n','\r\n']){
+  const journal=['## Journal','','Keep these blank lines.','','','Do not change me.','',''].join(eol);
+  let raw='## Tasks'+eol+eol+journal+'## Ideas'+eol;
+  for(let i=1;i<=3;i++){
+   raw=appendDiaryEntry(raw,'Tasks',`- [ ] Task ${i}`);
+   raw=appendDiaryEntry(raw,'Ideas',`- Idea ${i}`);
+  }
+  assert.equal(raw,['## Tasks','','- [ ] Task 1','- [ ] Task 2','- [ ] Task 3','',''].join(eol)+journal+['## Ideas','','- Idea 1','- Idea 2','- Idea 3',''].join(eol));
+  const body='## Tasks'+eol+'- [ ] Existing'+eol+'  > Keep  '+eol+'  > '+eol+'  > detail'+eol;
+  const messy=body+eol+eol+eol+journal;
+  assert.equal(appendDiaryEntry(messy,'Tasks','- [ ] New'),body+'- [ ] New'+eol+eol+journal);
+ }
+});

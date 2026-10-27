@@ -29,8 +29,8 @@ jobs:
             dist/main.js
             dist/manifest.json
             dist/styles.css
-      - name: Create draft with verified assets
+      - name: Publish release with verified assets
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" dist/main.js dist/manifest.json dist/styles.css --verify-tag --draft --title "OneCalendar $RELEASE_TAG" --notes-file "docs/RELEASE_NOTES_$RELEASE_TAG.md"
+        run: gh release create "$RELEASE_TAG" dist/main.js dist/manifest.json dist/styles.css --verify-tag --latest --title "OneCalendar $RELEASE_TAG" --notes-file "docs/RELEASE_NOTES_$RELEASE_TAG.md"

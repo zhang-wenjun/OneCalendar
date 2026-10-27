@@ -18,9 +18,18 @@ export function diarySections(raw:string){
 export function appendDiaryEntry(raw:string,section:DiarySection,entry:string){
   const matches=diarySections(raw).filter(s=>s.name===section);
   if(matches.length>1)throw Error(`Multiple ${section} sections; merge them before adding a record.`);
-  const eol=raw.includes('\r\n')?'\r\n':'\n';const content=entry.replace(/\r?\n/g,eol);
-  if(!matches.length)return raw+(raw.endsWith('\n')?'':'\n')+eol+`## ${section}`+eol+eol+content+eol;
+  const eol=raw.includes('\r\n')?'\r\n':'\n';
+  const content=entry.replace(/\r?\n/g,eol).replace(/^(?:[ \t]*\r?\n)+|(?:\r?\n[ \t]*)+$/g,'');
+  if(!matches.length){
+    // Preserve all existing text, adding only the separator that is missing.
+    const separator=!raw||/(?:\r?\n[ \t]*){2}$/.test(raw)?'':raw.endsWith('\n')?eol:eol+eol;
+    return raw+separator+`## ${section}`+eol+(content?eol+content+eol:'');
+  }
+  if(!content)return raw;
   const lines=(raw.match(/[^\n]*\n|[^\n]+$/g) ?? ['']),at=matches[0].end;
-  const before=lines.slice(0,at).join(''),after=lines.slice(at).join('');
-  return before+(before.endsWith('\n')?'':eol)+eol+content+eol+(after?eol+after:'');
+  // Normalize only the insertion boundary, never another section or entry body.
+  const before=lines.slice(0,at).join('').replace(/(?:\r?\n[ \t]*)+$/g,''),after=lines.slice(at).join('');
+  const last=before.slice(before.lastIndexOf('\n')+1);
+  const separator=/^ {0,3}#{1,6}\s/.test(last)?eol+eol:eol;
+  return before+separator+content+eol+(after?eol+after:'');
 }

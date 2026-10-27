@@ -15,6 +15,7 @@ store.journal={path:d=>`diary/${d}.md`,ensure:async d=>{const p=`diary/${d}.md`;
 const opened:string[]=[];
 const plugin:any={store,externalEvents:[],calendarStatus:'Offline: local records available.',openDiary:async(day:string)=>{opened.push(day);},syncCalendar:async()=>{},run:async(fn:any)=>fn(),capture:(kind:any)=>new Editor({} as any,store,kind).open()};
 const view=new CalendarView({} as any,plugin);
+view.app.workspace.openLinkText=async(path:string,_source:string,newLeaf:boolean)=>{if(newLeaf)throw Error('Task note should reuse a tab');opened.push(path);};
 async function boot(){await store.init();await store.create(make('task','Review paper',{plan:dateKey(),status:'todo'}));await store.create(make('event','Study session',{start:`${dateKey()}T09:00`,end:`${dateKey()}T10:00`}));await view.onOpen();Object.assign(window,{qa:{store,view,map,opened,openMini,openMemo:async()=>{const p=await store.create(make('project','Research project'));new MemoEditor({} as any,store,p.data.id).open();}}});}
 void boot().catch(e=>{console.error(JSON.stringify([...map.entries()]),JSON.stringify(store.problems()));throw e;});
 

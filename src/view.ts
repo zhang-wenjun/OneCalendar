@@ -1,4 +1,4 @@
-import { setIcon, ItemView, WorkspaceLeaf, Platform, MarkdownRenderer, Notice, Component } from 'obsidian';
+import { Menu, setIcon, ItemView, WorkspaceLeaf, Platform, MarkdownRenderer, Notice, Component } from 'obsidian';
 import type OneCalendar from './main';
 import { RecordFile, active, addDays, dateKey, labels, matchesTask, parseDate } from './model';
 import { Editor, MemoEditor, button } from './forms';
@@ -9,7 +9,7 @@ import type {ExternalEvent} from './calendar';
 export const VIEW='task-calendar-view';
 const pages:Record<string,string>={overview:'Overview',board:'Tasks',projects:'Projects',ideas:'Ideas',calendar:'Calendar',series:'Repeats'};
 export class CalendarView extends ItemView {
-  page='overview'; filter='active'; project=''; search=''; ideaFilter='inbox';
+  page='overview'; taskStatus='all'; filter='active'; project=''; search=''; ideaFilter='inbox';
   day=dateKey(); month=dateKey().slice(0,7); showArchived=false; limit=80; expanded=false;
   calendarMode:'three'|'week'|'month'=Platform.isMobile?'three':'week'; private weekScroll?:number; private clockTimer?:number;
   private renderer?:Component; private frame?:number;
@@ -50,7 +50,16 @@ export class CalendarView extends ItemView {
     const viewport=root.querySelector('.tc-calendar-viewport');if(viewport)viewport.scrollTop=scroll;else root.scrollTop=scroll;
   }
   taskToolbar(root:HTMLElement){
-    const bar=root.createDiv({cls:'tc-toolbar'});
+    if(Platform.isMobile){
+      const tabs=root.createDiv({cls:'tc-task-tabs',attr:{role:'group','aria-label':'Task status'}}),list=this.tasks();
+      for(const [key,title]of Object.entries({all:'All',...labels})){
+        const count=list.filter(r=>key==='all'||(r.data.status??'todo')===key).length;
+        if(['cancelled','skipped'].includes(key)&&!count&&this.taskStatus!==key)continue;
+        const tab=button(tabs,`${title} ${count}`,()=>{this.taskStatus=key;this.limit=80;this.render();},this.taskStatus===key?'is-active':'');
+        tab.setAttribute('aria-pressed',String(this.taskStatus===key));tab.setAttribute('data-task-status',key);
+      }
+    }
+    const bar=root.createDiv({cls:'tc-toolbar tc-task-toolbar'});
     this.searchBox(bar);
     const select=bar.createEl('select',{attr:{'aria-label':'Task filter'}});
     for(const [k,v]of Object.entries({active:'Active',today:'Today',overdue:'Overdue',upcoming:'Next seven days',inbox:'Inbox',unplanned:'Unscheduled',done:'Done',all:'All'}))select.createEl('option',{value:k,text:v});
@@ -75,18 +84,31 @@ export class CalendarView extends ItemView {
     check.onchange=()=>void this.plugin.run(()=>this.plugin.store.setStatus(d.id,check.checked?'done':'todo'));
     button(line,d.title,()=>new Editor(this.app,this.plugin.store,'task',r).open(),'tc-title-button');
     const meta=card.createDiv({cls:'tc-meta'});
-    if(d.plan)meta.createSpan({text:`Plan ${d.plan}`,cls:'tc-chip'});
-    if(d.due)meta.createSpan({text:`Due ${d.due}`,cls:active(d)&&d.due<dateKey()?'tc-chip tc-danger':'tc-chip'});
+    if(d.plan)this.taskDate(meta,d.plan,'Planned date');
+    if(d.due)this.taskDate(meta,d.due,'Due',active(d)&&d.due<dateKey());
     if(d.series)meta.createSpan({text:'↻ Repeat',cls:'tc-chip'});
-    if(r.diary)meta.createSpan({text:'From diary',cls:'tc-chip'});
     for(const p of d.projects ?? []){let name='Missing project';try{name=this.plugin.store.find(p)?.data.title ?? name;}catch{/* A missing project remains visible with its fallback label. */}button(meta,name,()=>{this.page='project';this.project=p;this.render();},'tc-chip');}
     if(d.remind){const reminder=this.plugin.store.lookup(`rem_${d.id}`);meta.createSpan({text:`Reminder ${new Date(d.remind).toLocaleString('en-US')} · ${reminder?.data.status ?? 'Pending sync'}`,cls:'tc-chip'});if(reminder?.data.error)meta.createSpan({text:String(reminder.data.error),cls:'tc-danger'});}
     const actions=card.createDiv({cls:'tc-card-actions'});
     const status=actions.createEl('select',{attr:{'aria-label':`${d.title} Status`}});for(const [k,v]of Object.entries(labels))status.createEl('option',{value:k,text:v});status.value=d.status ?? 'todo';
     status.onchange=()=>void this.plugin.run(()=>this.plugin.store.setStatus(d.id,status.value));
-    button(actions,'Open note',()=>this.app.workspace.openLinkText(r.path,'',true));
-    if(d.source)button(actions,'Source idea',()=>{const idea=this.plugin.store.find(d.source!);if(idea)return this.app.workspace.openLinkText(idea.path,'',true);new Notice('Source idea not found yet');});
+    status.addClass('tc-task-status');
+    this.iconButton(actions,'file-text',`Open note for ${d.title}`,()=>this.app.workspace.openLinkText(r.path,'',false));
+    const more=this.iconButton(actions,'ellipsis',`More actions for ${d.title}`,()=>{});
+    more.onclick=e=>{
+      const menu=new Menu();
+      menu.addItem(item=>item.setTitle('Edit task').setIcon('pencil').onClick(()=>new Editor(this.app,this.plugin.store,'task',r).open()));
+      menu.addItem(item=>item.setTitle('Open note').setIcon('file-text').onClick(()=>void this.app.workspace.openLinkText(r.path,'',false)));
+      if(d.source)menu.addItem(item=>item.setTitle('Source idea').setIcon('lightbulb').onClick(()=>{const idea=this.plugin.store.find(d.source!);if(idea)void this.app.workspace.openLinkText(idea.path,'',false);else new Notice('Source idea not found yet');}));
+      menu.showAtMouseEvent(e);
+    };
     card.draggable=!Platform.isMobile;card.ondragstart=e=>e.dataTransfer?.setData('text/task-calendar',d.id);
+  }
+  taskDate(root:HTMLElement,value:string,label:string,overdue=false){
+    const el=root.createSpan({cls:overdue?'tc-task-date tc-danger':'tc-task-date',attr:{'aria-label':`${label}: ${value}${overdue?' · Overdue':''}`}});
+    setIcon(el.createSpan(),'calendar-days');
+    const date=parseDate(value),formatted=date?date.toLocaleDateString('en-US',{month:'short',day:'numeric',...(value.slice(0,4)!==dateKey().slice(0,4)?{year:'numeric'}:{})}):value;
+    el.createSpan({text:`${label==='Due'?'Due ':''}${formatted}${overdue?' · Overdue':''}`});el.title=`${label}: ${value}`;
   }
   taskList(root:HTMLElement,list:RecordFile[]){
     const old=list.filter(r=>r.data.series&&active(r.data)&&r.data.plan&&r.data.plan<dateKey());
@@ -110,8 +132,10 @@ export class CalendarView extends ItemView {
     const upcoming=this.section(root,'Next seven days · Events');let any=false;for(let n=1;n<=7;n++){const day=addDays(dateKey(),n);if(this.eventsFor(day).length){any=true;upcoming.createEl('h3',{text:day});this.agenda(upcoming,day);}}if(!any)this.empty(upcoming,'No events in the next seven days');
   }
   board(root:HTMLElement){
-    const board=root.createDiv({cls:'tc-board'});const list=this.tasks();
-    for(const [k,title]of Object.entries({todo:'To do',doing:'In progress',done:'Done'})){
+    const board=root.createDiv({cls:Platform.isMobile?'tc-board tc-task-mobile-list':'tc-board'});const list=this.tasks();
+    if(Platform.isMobile){this.taskList(board,list.filter(r=>this.taskStatus==='all'||(r.data.status??'todo')===this.taskStatus));return;}
+    for(const [k,title]of Object.entries(labels)){
+      if(['cancelled','skipped'].includes(k)&&!list.some(r=>r.data.status===k))continue;
       const col=board.createDiv({cls:'tc-column'});const items=list.filter(r=>(r.data.status??'todo')===k);col.createEl('h2',{text:`${title} · ${items.length}`});
       col.ondragover=e=>e.preventDefault();col.ondrop=e=>{e.preventDefault();const id=e.dataTransfer?.getData('text/task-calendar');if(id)void this.plugin.run(()=>this.plugin.store.setStatus(id,k));};
       this.taskList(col,items);

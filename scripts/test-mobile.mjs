@@ -45,7 +45,7 @@ try{
   await page.getByRole('button',{name:'Week',exact:true}).tap();await page.locator('.tc-week-scroll').evaluate(e=>{e.scrollTop=0;});await page.locator('.tc-time-slot').first().tap();assert.equal(await page.locator('.modal').count(),1);await page.getByRole('button',{name:'Cancel',exact:true}).tap();
   await page.getByRole('button',{name:'3 days',exact:true}).tap();
   assert.equal(await page.locator('.tc-week-column').count(),3);
-  assert.equal(await page.locator('.tc-week-scroll').evaluate(e=>e.scrollHeight===e.clientHeight),true);
+  assert.equal(await page.locator('.tc-week-scroll').evaluate(e=>getComputedStyle(e).overflowY),'visible');
   assert.equal(await page.locator('.tc-now-label').evaluate(e=>getComputedStyle(e).display),'none');
   assert.equal(await page.getByLabel('More pages').count(),0);
   const firstDay=await page.locator('.tc-week-body').getAttribute('data-week');
@@ -66,6 +66,27 @@ try{
   await page.getByRole('button',{name:'Cancel',exact:true}).tap();
   await page.getByRole('button',{name:'Month',exact:true}).tap();await page.locator('.tc-day').nth(10).tap();assert.ok(await page.evaluate(()=>window.qa.opened.length===1));
   await page.getByRole('navigation').getByRole('button',{name:'Tasks',exact:true}).tap();assert.equal(await page.locator('.tc-board').count(),1);assert.equal(await page.getByRole('button',{name:'Task board',exact:true}).count(),0);
+  await page.evaluate(async()=>{
+    const {store}=window.qa,base=store.all('task')[0].data;
+    for(const [id,title,status]of [['ui_doing','调研动态可变 Rydberg zone 方案','doing'],['ui_done','整理参考文献','done'],['ui_cancelled','已取消的测试任务','cancelled']])await store.create({...base,id,title,status,plan:undefined,due:undefined,remind:undefined,series:undefined});
+    window.qa.view.render();
+  });
+  assert.equal(await page.locator('.tc-column').count(),0);
+  const allCount=await page.locator('.tc-task').count();
+  await page.locator('[data-task-status=doing]').tap();assert.equal(await page.locator('.tc-task').count(),1);
+  assert.equal(await page.locator('.tc-title-button').innerText(),'调研动态可变 Rydberg zone 方案');
+  const chrome=await page.locator('.tc-title-button').evaluate(e=>{const s=getComputedStyle(e);return {border:s.borderTopWidth,shadow:s.boxShadow,bg:s.backgroundColor};});
+  assert.deepEqual(chrome,{border:'0px',shadow:'none',bg:'rgba(0, 0, 0, 0)'});
+  await page.locator('.tc-title-button').tap();await page.getByRole('button',{name:'Cancel',exact:true}).tap();
+  await page.getByRole('button',{name:'More actions for 调研动态可变 Rydberg zone 方案',exact:true}).tap();
+  await page.getByRole('menuitem',{name:'Open note',exact:true}).tap();
+  await page.locator('.tc-task-status').selectOption('done');await page.waitForFunction(()=>document.querySelectorAll('.tc-task').length===0);
+  await page.locator('[data-task-status=done]').tap();assert.ok(await page.locator('.tc-task').count()>=2);
+  await page.locator('[data-task-status=cancelled]').tap();assert.equal(await page.locator('.tc-task').count(),1);
+  await page.locator('[data-task-status=all]').tap();assert.equal(await page.locator('.tc-task').count(),allCount);
+  assert.equal(await page.getByText('From diary',{exact:true}).count(),0);
+  assert.ok(await page.evaluate(()=>document.querySelector('#app').scrollWidth<=innerWidth));
+  await page.screenshot({path:`artifacts/mobile/tasks-${width}.png`});
   await page.evaluate(()=>window.qa.openMemo());
   assert.ok(await page.getByRole('heading',{name:'Update memo · Research project'}).isVisible());
   assert.ok(await page.locator('.tc-memo-input').evaluate(e=>e.compareDocumentPosition(e.nextElementSibling)&Node.DOCUMENT_POSITION_FOLLOWING));
@@ -79,7 +100,7 @@ try{
   await page.waitForFunction(()=>window.miniQA.files.size===2);
   await page.getByRole('button',{name:`Open diary ${other}`,exact:true}).tap();assert.equal(await page.locator('.modal').count(),0);
   await page.evaluate(()=>window.miniQA.mini.render());await page.screenshot({path:`artifacts/mobile/mini-${width}.png`});
-  assert.deepEqual(errors,[]);results.push({width,status:'passed',checks:['sidebar calendar and creation confirmation','memo project title','sticky header and controls','event reminder persistence','end time repair across midnight','in-progress task filter','no page overflow','event validation','idea and task capture','storage reload','journal preserved','one modal per touch','compact navigation','three-day navigation','single vertical scroll','long-press drag range','month opens diary','single Tasks board']});await context.close();
+  assert.deepEqual(errors,[]);results.push({width,status:'passed',checks:['sidebar calendar and creation confirmation','memo project title','sticky header and controls','event reminder persistence','end time repair across midnight','in-progress task filter','no page overflow','event validation','idea and task capture','storage reload','journal preserved','one modal per touch','compact navigation','three-day navigation','single vertical scroll','long-press drag range','month opens diary','mobile status tabs and All','title opens editor','note menu reuses tab','status change updates filtered list']});await context.close();
  }
  const desktop=await browser.newPage({viewport:{width:1280,height:900}});
  await desktop.goto(pathToFileURL(`${process.cwd()}/artifacts/mobile/index.html`).href+'?desktop');await desktop.waitForFunction(()=>window.qa);
@@ -88,7 +109,16 @@ try{
  await desktop.locator('.tc-week-scroll').evaluate(e=>e.scrollTop=0);const slot=desktop.locator('.tc-time-slot').first();await slot.scrollIntoViewIfNeeded();const rect=await slot.boundingBox();
  await desktop.mouse.move(rect.x+rect.width/2,rect.y+10);await desktop.mouse.down();await desktop.mouse.move(rect.x+rect.width/2,rect.y+70);await desktop.mouse.up();
  assert.equal(await desktop.locator('.modal').count(),1);await desktop.getByRole('button',{name:'Cancel',exact:true}).click();
- await desktop.screenshot({path:'artifacts/mobile/desktop-compact.png'});results.push({width:1280,status:'passed',checks:['desktop three-day layout','mouse drag range','single modal']});await desktop.close();
+ await desktop.screenshot({path:'artifacts/mobile/desktop-compact.png'});
+ await desktop.getByRole('navigation').getByRole('button',{name:'Tasks',exact:true}).click();
+ assert.equal(await desktop.locator('.tc-column').count(),3);
+ assert.equal(await desktop.locator('.tc-task-tabs').count(),0);
+ const card=desktop.locator('.tc-task').first();
+ assert.equal(await card.locator('.tc-title-button').evaluate(e=>getComputedStyle(e).boxShadow),'none');
+ await card.dragTo(desktop.locator('.tc-column').nth(1));
+ await desktop.waitForFunction(()=>window.qa.store.all('task')[0].data.status==='doing');
+ assert.ok(await desktop.evaluate(()=>document.querySelector('#app').scrollWidth<=innerWidth));
+ await desktop.screenshot({path:'artifacts/mobile/tasks-desktop.png'});results.push({width:1280,status:'passed',checks:['desktop three-day layout','mouse drag range','single modal','desktop task columns and drag status change']});await desktop.close();
 }finally{await browser.close();}
 await writeFile('artifacts/mobile/results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));
 
