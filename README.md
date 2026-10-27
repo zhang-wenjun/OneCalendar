@@ -1,4 +1,4 @@
-# OneCalendar 0.9.3
+# OneCalendar 0.9.4
 
 A free, MIT-licensed Obsidian plugin for tasks, quick ideas, lightweight projects and calendars. Your notes remain Markdown files. The plugin supports desktop and Android, with an English interface.
 

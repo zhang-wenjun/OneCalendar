@@ -113,3 +113,12 @@
 .tc-root.tc-mobile .tc-task select.tc-task-status{min-height:44px;height:44px;font-size:12px}
 .tc-root.tc-mobile .tc-task-tabs button{min-height:44px}
 @container(max-width:650px){.tc-root:not(.tc-mobile) .tc-board{grid-template-columns:1fr}.tc-root .tc-task-toolbar{flex-wrap:wrap}.tc-root .tc-task-toolbar input[type=search]{flex-basis:100%}}
+
+/* Content links must stay flat even when the host theme styles buttons. */
+.tc-root button.tc-project-title,.tc-root button.tc-idea-preview{display:block;min-width:0;max-width:100%;height:auto;min-height:28px;border:0;box-shadow:none;background:transparent;color:var(--text-normal);text-align:left;white-space:normal;overflow-wrap:anywhere;line-height:1.65;padding:0;border-radius:3px}
+.tc-root button.tc-project-title{font-size:17px;font-weight:600;margin-bottom:6px}
+.tc-root button.tc-idea-preview{width:100%;font-size:14px;font-weight:400;padding:8px 0;margin:0}
+.tc-root button.tc-idea-preview+.tc-idea-preview{margin-top:4px}
+.tc-root button.tc-project-title:hover,.tc-root button.tc-idea-preview:hover{color:var(--tc-accent);background:transparent;box-shadow:none}
+.tc-root button.tc-project-title:focus-visible,.tc-root button.tc-idea-preview:focus-visible{outline:2px solid var(--tc-accent);outline-offset:3px}
+.tc-root.tc-mobile button.tc-project-title,.tc-root.tc-mobile button.tc-idea-preview{min-height:44px}
