@@ -1,4 +1,4 @@
-import { Menu, setIcon, ItemView, WorkspaceLeaf, Platform, MarkdownRenderer, Notice, Component } from 'obsidian';
+import { Modal, Menu, setIcon, ItemView, WorkspaceLeaf, Platform, MarkdownRenderer, Notice, Component } from 'obsidian';
 import type OneCalendar from './main';
 import { RecordFile, active, addDays, dateKey, labels, matchesTask, parseDate } from './model';
 import { Editor, MemoEditor, button } from './forms';
@@ -100,9 +100,18 @@ export class CalendarView extends ItemView {
       menu.addItem(item=>item.setTitle('Edit task').setIcon('pencil').onClick(()=>new Editor(this.app,this.plugin.store,'task',r).open()));
       menu.addItem(item=>item.setTitle('Open note').setIcon('file-text').onClick(()=>void this.app.workspace.openLinkText(r.path,'',false)));
       if(d.source)menu.addItem(item=>item.setTitle('Source idea').setIcon('lightbulb').onClick(()=>{const idea=this.plugin.store.find(d.source!);if(idea)void this.app.workspace.openLinkText(idea.path,'',false);else new Notice('Source idea not found yet');}));
+      menu.addItem(item=>item.setTitle('Delete task').setIcon('trash-2').onClick(()=>this.deleteRecord(r)));
       menu.showAtMouseEvent(e);
     };
     card.draggable=!Platform.isMobile;card.ondragstart=e=>e.dataTransfer?.setData('text/task-calendar',d.id);
+  }
+  deleteRecord(record:RecordFile){
+    const modal=new Modal(this.app);modal.titleEl.setText(`Delete ${record.data.tc}?`);
+    modal.contentEl.createEl('p',{text:`Delete “${record.data.title}”? A recovery copy is kept in TaskCalendar/Deleted. Other records are preserved.`});
+    const actions=modal.contentEl.createDiv({cls:'tc-form-actions'});
+    button(actions,'Cancel',()=>modal.close());
+    button(actions,'Delete',()=>{modal.close();void this.plugin.run(()=>this.plugin.store.deleteRecord(record));},'mod-warning');
+    if(Platform.isMobile)modal.modalEl.addClass('tc-mobile-modal');modal.open();
   }
   taskDate(root:HTMLElement,value:string,label:string,overdue=false){
     const el=root.createSpan({cls:overdue?'tc-task-date tc-danger':'tc-task-date',attr:{'aria-label':`${label}: ${value}${overdue?' · Overdue':''}`}});
@@ -181,6 +190,7 @@ export class CalendarView extends ItemView {
       for(const [key,title]of Object.entries({inbox:'Inbox',processed:'Processed',archived:'Archived'}))status.createEl('option',{value:key,text:title});
       status.value=r.data.status??'inbox';status.onchange=()=>void this.plugin.run(()=>this.plugin.store.update(r.data.id,{status:status.value}));
       this.iconButton(actions,'file-text',`Open note for ${r.data.title}`,()=>this.app.workspace.openLinkText(r.path,'',false));
+      this.iconButton(actions,'trash-2',`Delete idea ${r.data.title}`,()=>this.deleteRecord(r));
     }
     if(list.length>this.limit)button(root,'Show more',()=>{this.limit+=80;this.render();});
   }
@@ -278,7 +288,7 @@ export class CalendarView extends ItemView {
     const events=this.eventsFor(day);if(!events.length)this.empty(root,'No events on this day');
     for(const e of events){const row=root.createDiv({cls:'tc-agenda-item'});row.createDiv({text:e.allDay?'All day':`${new Date(e.start).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} — ${new Date(e.end).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`,cls:'tc-muted'});button(row,e.title,()=>this.openEvent(e),'tc-title-button');row.createSpan({text:e.source,cls:'tc-chip'});
       row.style.setProperty('--tc-calendar-color',safeColor(e.color));
-      if(e.record){button(row,'Edit ',()=>new Editor(this.app,this.plugin.store,'event',e.record).open());button(row,'Archive',()=>this.plugin.store.update(e.id,{archived:true}));}else button(row,'View details',()=>this.openEvent(e));
+      if(e.record){button(row,'Edit ',()=>new Editor(this.app,this.plugin.store,'event',e.record).open());button(row,'Archive',()=>this.plugin.store.update(e.id,{archived:true}));button(row,'Delete',()=>this.deleteRecord(e.record));}else button(row,'View details',()=>this.openEvent(e));
     }
   }
 }

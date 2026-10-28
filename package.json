@@ -1,6 +1,6 @@
 {
   "name": "one-calendar",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "private": true,
   "scripts": {
     "build": "tsc --noEmit && node scripts/build.mjs",

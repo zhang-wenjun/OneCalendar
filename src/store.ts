@@ -130,6 +130,32 @@ export class Store {
       }finally{this.migrating=false;this.changed();}
     });
   }
+  async deleteRecord(expected:RecordFile) {
+    return this.serial(async()=>{
+      const rec=this.find(expected.data.id);if(!rec)throw Error('Record no longer exists.');
+      if(rec.raw!==expected.raw)throw Error('Record changed. Reopen it before deleting.');
+      if(!['task','idea','event'].includes(rec.data.tc)||rec.bundle)throw Error('This record cannot be deleted here.');
+      if(rec.data.series)throw Error('Use Skipped for a repeating task, or end its repeat first.');
+      if(this.lookup(`rem_${rec.data.id}`))throw Error('Remove and sync the calendar reminder before deleting this task.');
+      const source=await this.files.read(rec.path);
+      const dir=`${this.root}/Deleted`;await this.files.mkdir(dir);
+      const backup=`${dir}/${rec.data.id}-${Date.now()}.txt`;
+      await this.files.create(backup,source);
+      if(rec.diary){
+        await this.files.process(rec.path,raw=>{
+          if(raw!==source)throw Error('Note changed. Nothing was deleted.');
+          const current=diaryTasks(rec.path,raw,rec.diary!.day,this.details).find(r=>r.data.id===rec.data.id);
+          if(!current||current.raw!==rec.raw)throw Error('Record changed. Nothing was deleted.');
+          const lines=raw.match(/[^\n]*\n|[^\n]+$/g)??[];
+          lines.splice(current.diary!.line,current.diary!.endLine!-current.diary!.line);
+          return lines.join('');
+        });
+      }else{
+        await this.files.process(rec.path,raw=>{if(raw!==source)throw Error('Note changed. Nothing was deleted.');return '';});
+      }
+      await this.load(rec.path);
+    });
+  }
   async update(key:string,changes:Partial<Entity>,body?:string,expected?:RecordFile) {
     return this.serial(async()=>{
       const rec=this.find(key); if(!rec) throw new Error('Record missing or invalid file format.');
