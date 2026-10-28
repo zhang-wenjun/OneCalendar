@@ -177,8 +177,10 @@ export class CalendarView extends ItemView {
     for(const r of list.slice(0,this.limit)){const card=root.createDiv({cls:'tc-panel'});card.createDiv({text:new Date(r.data.created).toLocaleString('en-US'),cls:'tc-muted'});this.markdown(card,r);const actions=card.createDiv({cls:'tc-actions'});
       button(actions,'Edit / link projects',()=>new Editor(this.app,this.plugin.store,'idea',r).open());
       button(actions,r.data.task?'View task':'Convert to task',async()=>{const t=await this.plugin.store.convertIdea(r.data.id);new Editor(this.app,this.plugin.store,'task',t).open();});
-      button(actions,'Expand in note',async()=>{await this.plugin.store.update(r.data.id,{status:'processed'});await this.app.workspace.openLinkText(r.path,'',true);});
-      button(actions,this.ideaFilter==='archived'?'Restore to inbox':'Archive',()=>this.plugin.store.update(r.data.id,{status:this.ideaFilter==='archived'?'inbox':'archived'}));
+      const status=actions.createEl('select',{attr:{'aria-label':`${r.data.title} Status`}});
+      for(const [key,title]of Object.entries({inbox:'Inbox',processed:'Processed',archived:'Archived'}))status.createEl('option',{value:key,text:title});
+      status.value=r.data.status??'inbox';status.onchange=()=>void this.plugin.run(()=>this.plugin.store.update(r.data.id,{status:status.value}));
+      this.iconButton(actions,'file-text',`Open note for ${r.data.title}`,()=>this.app.workspace.openLinkText(r.path,'',false));
     }
     if(list.length>this.limit)button(root,'Show more',()=>{this.limit+=80;this.render();});
   }
